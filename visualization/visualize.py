@@ -2,32 +2,31 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Example: Load a sample Weather4cast patch from an HDF5 file
-# Replace 'path_to_file.h5' and dataset name with your actual file and dataset
-
-file_path = '../../boxi_0015.train.reflbt0.ns.h5'
+file_path = '../dataset/w4c24/2019/HRIT/roxi_0008.cum1test19.reflbt0.ns.h5'
 
 f = h5py.File(file_path, 'r')
-data = f['rates.crop']
 
-print("Data shape:", data.shape)  # Should be (11, 256, 256) or similar
+print(f"Keys in the file:", list(f.keys()))
 
+data = f['REFL-BT']
 
-# Plot each spectral band
-num_bands = data.shape[0]
+print("Data shape:", data.shape)
+
+num_bands = data.shape[1]
 
 fig, axs = plt.subplots(3, 4, figsize=(16, 12))
 axs = axs.flatten()
 
+first_image = data[0] # Getting the first image from batch
+
 for i in range(num_bands):
     ax = axs[i]
-    band_img = data[i]
+    band_img = first_image[i]
     im = ax.imshow(band_img, cmap='gray')
     ax.set_title(f'Spectral Band {i+1}')
     ax.axis('off')
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-# Hide any empty subplots (if 11 bands in a 3x4 grid, last subplot empty)
 for j in range(num_bands, len(axs)):
     axs[j].axis('off')
 
