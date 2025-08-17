@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 import tarfile
 
-if not os.path.exists("packs"):
-    os.makedirs("packs")
+if not os.path.exists("../dataset/packs"):
+    os.makedirs("../dataset/packs")
 
 
 files = Path("./dataset/w4c24").glob("**/*")
