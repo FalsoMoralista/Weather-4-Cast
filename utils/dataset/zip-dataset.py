@@ -25,6 +25,8 @@ def zip_dataset(
 
     current_pack_size = 0
     current_pack_zip = None
+    
+    generated_zips = 0
 
     for idx, file in enumerate(files):
         if not file.is_file():
@@ -44,9 +46,21 @@ def zip_dataset(
             print(
                 f"File {file} is larger than 5GB, packed separately. Pack index: {pack_idx}"
             )
+            generated_zips += 1
+            if generated_zips >= zips_to_generate:
+                if not current_pack_zip:
+                    return
+                else:
+                    current_pack_zip.close()
+                    print(f"Generated {generated_zips} zips, stopping as requested.")
+                    return
             continue
         if current_pack_size + file_size > MAX_SIZE:
             current_pack_zip.close()
+            generated_zips += 1
+            if zips_to_generate != -1 and generated_zips >= zips_to_generate:
+                print(f"Generated {generated_zips} zips, stopping as requested.")
+                return
             pack_idx += 1
             current_pack_zip = zipfile.ZipFile(
                 pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
