@@ -1,0 +1,7 @@
+*._
+._*
+*.DS_Store
+nohup2.out
+*.pth
+*.__
+__pycache__
