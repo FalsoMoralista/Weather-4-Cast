@@ -8,7 +8,7 @@ from googleapiclient.http import MediaIoBaseDownload
 
 
 def main(dataset_name: str):
-    creds = Credentials.from_authorized_user_file("token.json", [])
+    creds = Credentials.from_authorized_user_file("credentials/token.json", [])
 
     try:
         service = build("drive", "v3", credentials=creds)
