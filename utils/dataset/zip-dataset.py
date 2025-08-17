@@ -1,9 +1,20 @@
 import os
+import sys
 from pathlib import Path
 import tarfile
 
-if not os.path.exists("../dataset/packs"):
-    os.makedirs("../dataset/packs")
+dataset_name = sys.argv[1]
+
+
+def zip_dataset(dataset_name):
+    dataset_path = Path(f"./dataset/{dataset_name}")
+    if not dataset_path.exists():
+        print(f"Dataset path {dataset_path} does not exist.")
+        return
+
+    pack_path = Path("./dataset/packs")
+    if not pack_path.exists():
+        pack_path.mkdir(parents=True)
 
 
 files = Path("./dataset/w4c24").glob("**/*")
