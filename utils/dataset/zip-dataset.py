@@ -72,10 +72,13 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
             generated_zips += 1
             if generated_zips >= zips_to_generate:
                 if not current_pack_zip:
+                    print(f"Generated {generated_zips} zips, stopping as requested.")
+                    log_current_file_index(current_file_index)
                     return
                 else:
                     current_pack_zip.close()
                     print(f"Generated {generated_zips} zips, stopping as requested.")
+                    log_current_file_index(current_file_index)
                     return
             continue
         if current_pack_size + file_size > MAX_SIZE:
@@ -83,6 +86,7 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
             generated_zips += 1
             if zips_to_generate != -1 and generated_zips >= zips_to_generate:
                 print(f"Generated {generated_zips} zips, stopping as requested.")
+                log_current_file_index(current_file_index)
                 return
             pack_idx += 1
             current_pack_zip = zipfile.ZipFile(
@@ -100,14 +104,13 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
 
     if current_pack_zip and current_pack_size > 0:
         current_pack_zip.close()
+        log_current_file_index(current_file_index)
         print(f"Final pack {pack_idx}")
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print(
-            "Usage: python zip-dataset.py <dataset_name> <zips_to_generate>"
-        )
+        print("Usage: python zip-dataset.py <dataset_name> <zips_to_generate>")
         sys.exit(1)
     dataset_name = sys.argv[1]
     zips_to_generate = int(sys.argv[2])
