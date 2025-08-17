@@ -4,6 +4,27 @@ from pathlib import Path
 import zipfile
 
 
+def log_current_file_index(current_file_index):
+    log_file = Path("./current_file_index.log")
+    with log_file.open("w") as f:
+        f.write(str(current_file_index))
+    print(f"Current file index logged to {log_file}")
+
+
+def read_last_file_index():
+    log_file = Path("./current_file_index.log")
+    if log_file.exists():
+        with log_file.open("r") as f:
+            try:
+                return int(f.read().strip())
+            except ValueError:
+                print(f"Invalid value in {log_file}, starting from index 0.")
+                return 0
+    else:
+        print(f"{log_file} does not exist, starting from index 0.")
+        return 0
+
+
 def zip_dataset(
     dataset_name: str, last_file_index: int = -1, zips_to_generate: int = -1
 ):
@@ -27,7 +48,7 @@ def zip_dataset(
     current_pack_zip = None
 
     generated_zips = 0
-    current_file_index = last_file_index
+    current_file_index = read_last_file_index()
 
     for idx, file in enumerate(files):
         if file.is_dir():
