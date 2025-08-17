@@ -17,8 +17,7 @@ def zip_dataset(
         pack_path.mkdir(parents=True)
 
     files = dataset_path.glob("**/*")
-    files_name = [file for file in files if file.is_file()]
-    files_name = sorted(files_name, key=lambda x: x.stat().st_size, reverse=True)
+    files = sorted(files, key=lambda x: x.stat().st_size, reverse=True)
 
     MAX_SIZE = 5 * 1024 * 1024 * 1024
 
@@ -28,7 +27,11 @@ def zip_dataset(
     current_pack_zip = None
 
     for idx, file in enumerate(files):
+        if not file.is_file():
+            print(f"Skipping non-file {file}")
+            continue
         if idx < last_file_index:
+            print(f"Skipping file {file} at index {idx} (last_file_index={last_file_index})")
             continue
         file_size = os.path.getsize(file)
         if file_size > MAX_SIZE:
