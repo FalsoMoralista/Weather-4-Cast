@@ -16,7 +16,7 @@ def zip_dataset(dataset_name: str, last_file_index: int = -1):
 
     files = dataset_path.glob("**/*")
     files_name = [file for file in files if file.is_file()]
-    files_name = sorted(files_name, key=lambda x: str(x.relative_to(dataset_path)))
+    files_name = sorted(files_name, key=lambda x: x.stat().st_size, reverse=True)
 
     MAX_SIZE = 5 * 1024 * 1024 * 1024
 
@@ -27,7 +27,9 @@ def zip_dataset(dataset_name: str, last_file_index: int = -1):
         pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
     )
 
-    for file in files:
+    for idx, file in enumerate(files):
+        if idx < last_file_index:
+            continue
         file_size = os.path.getsize(file)
         if file_size > MAX_SIZE:
             pack_idx += 1
