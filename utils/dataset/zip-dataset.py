@@ -4,7 +4,7 @@ from pathlib import Path
 import zipfile
 
 
-def zip_dataset(dataset_name: str, last_file_index: int = -1):
+def zip_dataset(dataset_name: str, last_file_index: int = -1, zips_to_generate: int = -1):
     dataset_path = Path(f"./dataset/{dataset_name}")
     if not dataset_path.exists():
         print(f"Dataset path {dataset_path} does not exist.")
@@ -60,8 +60,11 @@ def zip_dataset(dataset_name: str, last_file_index: int = -1):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python zip-dataset.py <dataset_name> <last_file_index>")
+        print(
+            "Usage: python zip-dataset.py <dataset_name> <last_file_index> <zips_to_generate>"
+        )
         sys.exit(1)
     dataset_name = sys.argv[1]
     last_file_index = int(sys.argv[2])
-    zip_dataset(dataset_name, last_file_index)
+    zips_to_generate = int(sys.argv[3])
+    zip_dataset(dataset_name, last_file_index, zips_to_generate)
