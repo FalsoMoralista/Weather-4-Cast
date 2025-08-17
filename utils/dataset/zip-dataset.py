@@ -25,15 +25,17 @@ def zip_dataset(
 
     current_pack_size = 0
     current_pack_zip = None
-    
+
     generated_zips = 0
 
     for idx, file in enumerate(files):
-        if not file.is_file():
-            print(f"Skipping non-file {file}")
+        if file.is_dir():
+            print(f"Skipping dir {file}")
             continue
         if idx < last_file_index:
-            print(f"Skipping file {file} at index {idx} (last_file_index={last_file_index})")
+            print(
+                f"Skipping file {file} at index {idx} (last_file_index={last_file_index})"
+            )
             continue
         file_size = os.path.getsize(file)
         if file_size > MAX_SIZE:
