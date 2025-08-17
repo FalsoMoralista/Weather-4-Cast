@@ -3,8 +3,6 @@ import sys
 from pathlib import Path
 import zipfile
 
-dataset_name = sys.argv[1]
-
 
 def zip_dataset(dataset_name: str):
     dataset_path = Path(f"./dataset/{dataset_name}")
@@ -62,4 +60,5 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python zip-dataset.py <dataset_name>")
         sys.exit(1)
+    dataset_name = sys.argv[1]
     zip_dataset(dataset_name)
