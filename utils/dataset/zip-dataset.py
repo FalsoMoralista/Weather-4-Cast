@@ -4,7 +4,9 @@ from pathlib import Path
 import zipfile
 
 
-def zip_dataset(dataset_name: str, last_file_index: int = -1, zips_to_generate: int = -1):
+def zip_dataset(
+    dataset_name: str, last_file_index: int = -1, zips_to_generate: int = -1
+):
     dataset_path = Path(f"./dataset/{dataset_name}")
     if not dataset_path.exists():
         print(f"Dataset path {dataset_path} does not exist.")
@@ -20,12 +22,10 @@ def zip_dataset(dataset_name: str, last_file_index: int = -1, zips_to_generate: 
 
     MAX_SIZE = 5 * 1024 * 1024 * 1024
 
-    pack_idx = 0
+    pack_idx = -1
 
     current_pack_size = 0
-    current_pack_zip = zipfile.ZipFile(
-        pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
-    )
+    current_pack_zip = None
 
     for idx, file in enumerate(files):
         if idx < last_file_index:
@@ -50,10 +50,15 @@ def zip_dataset(dataset_name: str, last_file_index: int = -1, zips_to_generate: 
             )
             current_pack_size = 0
             print(f"Pack {pack_idx} reached 5GB, starting a new pack.")
+        if current_pack_zip is None:
+            pack_idx += 1
+            zipfile.ZipFile(
+                pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
+            )
         current_pack_zip.write(file, arcname=file.relative_to(dataset_path))
         current_pack_size += file_size
 
-    if current_pack_size > 0:
+    if current_pack_zip and current_pack_size > 0:
         current_pack_zip.close()
         print(f"Final pack {pack_idx}")
 
