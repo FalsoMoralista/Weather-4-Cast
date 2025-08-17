@@ -6,7 +6,7 @@ import zipfile
 dataset_name = sys.argv[1]
 
 
-def zip_dataset(dataset_name):
+def zip_dataset(dataset_name: str):
     dataset_path = Path(f"./dataset/{dataset_name}")
     if not dataset_path.exists():
         print(f"Dataset path {dataset_path} does not exist.")
