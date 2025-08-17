@@ -25,9 +25,7 @@ def read_last_file_index():
         return 0
 
 
-def zip_dataset(
-    dataset_name: str, last_file_index: int = -1, zips_to_generate: int = -1
-):
+def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
     dataset_path = Path(f"./dataset/{dataset_name}")
     if not dataset_path.exists():
         print(f"Dataset path {dataset_path} does not exist.")
@@ -54,9 +52,9 @@ def zip_dataset(
         if file.is_dir():
             print(f"Skipping dir {file}")
             continue
-        if idx < last_file_index:
+        if idx < current_file_index:
             print(
-                f"Skipping file {file} at index {idx} (last_file_index={last_file_index})"
+                f"Skipping file {file} at index {idx} (current_file_index={current_file_index})"
             )
             continue
         current_file_index += 1
@@ -108,10 +106,9 @@ def zip_dataset(
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         print(
-            "Usage: python zip-dataset.py <dataset_name> <last_file_index> <zips_to_generate>"
+            "Usage: python zip-dataset.py <dataset_name> <zips_to_generate>"
         )
         sys.exit(1)
     dataset_name = sys.argv[1]
-    last_file_index = int(sys.argv[2])
-    zips_to_generate = int(sys.argv[3])
-    zip_dataset(dataset_name, last_file_index, zips_to_generate)
+    zips_to_generate = int(sys.argv[2])
+    zip_dataset(dataset_name, zips_to_generate)
