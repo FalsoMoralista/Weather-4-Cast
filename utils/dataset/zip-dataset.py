@@ -27,6 +27,7 @@ def zip_dataset(
     current_pack_zip = None
 
     generated_zips = 0
+    current_file_index = last_file_index
 
     for idx, file in enumerate(files):
         if file.is_dir():
@@ -37,6 +38,7 @@ def zip_dataset(
                 f"Skipping file {file} at index {idx} (last_file_index={last_file_index})"
             )
             continue
+        current_file_index += 1
         file_size = os.path.getsize(file)
         if file_size > MAX_SIZE:
             pack_idx += 1
