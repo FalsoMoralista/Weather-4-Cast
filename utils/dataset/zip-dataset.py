@@ -56,3 +56,10 @@ def zip_dataset(dataset_name: str):
     if current_pack_size > 0:
         current_pack_zip.close()
         print(f"Final pack {pack_idx}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python zip-dataset.py <dataset_name>")
+        sys.exit(1)
+    zip_dataset(dataset_name)
