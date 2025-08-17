@@ -109,7 +109,7 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print("Usage: python zip-dataset.py <dataset_name> <zips_to_generate>")
         sys.exit(1)
     dataset_name = sys.argv[1]
