@@ -25,10 +25,9 @@ def main(dataset_name: str):
 
         files = response.get("files", [])
         print(f"Found {len(files)} files matching '{dataset_name}'.")
-        file_id = files[0]["id"]
-        print(f"Downloading file: {files[0]['name']} ({file_id})")
 
         for idx, file in enumerate(files):
+            print(f"Downloading file:", file['name'])
             file_id = file["id"]
             request = service.files().get_media(fileId=file_id)
 
