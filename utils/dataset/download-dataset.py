@@ -16,7 +16,7 @@ def main(dataset_name: str):
         response = (
             service.files()
             .list(
-                q=f"mimeType='application/zip' and name contains '{dataset_name}'",
+                q=f"name contains 'ns.h5'",
                 spaces="drive",
                 fields="nextPageToken, files(id, name)",
             )
@@ -24,7 +24,7 @@ def main(dataset_name: str):
         )
 
         files = response.get("files", [])
-        print(f"Found {len(files)} files matching '{dataset_name}'.")
+        print(f"Found {len(files)} files matching 'ns.h5'.")
 
         for idx, file in enumerate(files):
             print("Downloading file:", file["name"])
