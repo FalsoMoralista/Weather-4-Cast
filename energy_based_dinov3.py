@@ -75,7 +75,6 @@ from sklearn.metrics import accuracy_score
 
 import pickle
 
-import matplotlib.pyplot as plt
 from torchvision import transforms
 from PIL import Image
 import random
@@ -219,6 +218,7 @@ def main(args, resume_preempt=False):
     )
     model.eval()
     print('Dinov3 Model:', model)
+
     exit(0)
 
 
