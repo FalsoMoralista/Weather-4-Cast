@@ -56,7 +56,7 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
         if file_size > MAX_SIZE:
             pack_idx += 1
             large_file_zip = zipfile.ZipFile(
-                pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
+                pack_path / f"{dataset_name}-{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
             )
             large_file_zip.write(file, arcname=file.relative_to(dataset_path))
             large_file_zip.close()
@@ -84,14 +84,14 @@ def zip_dataset(dataset_name: str, zips_to_generate: int = -1):
                 return
             pack_idx += 1
             current_pack_zip = zipfile.ZipFile(
-                pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
+                pack_path / f"{dataset_name}-{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
             )
             current_pack_size = 0
             print(f"Pack {pack_idx} reached 5GB, starting a new pack.")
         if current_pack_zip is None:
             pack_idx += 1
             current_pack_zip = zipfile.ZipFile(
-                pack_path / f"{dataset_name}_{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
+                pack_path / f"{dataset_name}-{pack_idx}.zip", "w", zipfile.ZIP_DEFLATED
             )
         current_pack_zip.write(file, arcname=file.relative_to(dataset_path))
         current_pack_size += file_size

@@ -31,7 +31,7 @@ def main(dataset_name: str):
             file_id = file["id"]
             request = service.files().get_media(fileId=file_id)
 
-            OUTPUT_PATH = f"{dataset_name}-{idx}.zip"
+            OUTPUT_PATH = f"dataset/{dataset_name}-{idx}.zip"
 
             with open(OUTPUT_PATH, "wb") as f:
                 downloader = MediaIoBaseDownload(
