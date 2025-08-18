@@ -27,11 +27,11 @@ def main(dataset_name: str):
         print(f"Found {len(files)} files matching '{dataset_name}'.")
 
         for idx, file in enumerate(files):
-            print(f"Downloading file:", file['name'])
+            print("Downloading file:", file["name"])
             file_id = file["id"]
             request = service.files().get_media(fileId=file_id)
 
-            OUTPUT_PATH = f"dataset/{dataset_name}-{idx}.zip"
+            OUTPUT_PATH = f"dataset/{file['name']}"
 
             with open(OUTPUT_PATH, "wb") as f:
                 downloader = MediaIoBaseDownload(
