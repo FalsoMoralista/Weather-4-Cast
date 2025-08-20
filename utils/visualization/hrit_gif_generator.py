@@ -53,7 +53,7 @@ if __name__ == "__main__":
         print("Usage: python hrit_gif_generator.py <path_to_h5_file> <channel>")
         sys.exit(1)
     path = sys.argv[1]
-    channel = sys.argv[2]
+    channel = int(sys.argv[2])
     generator = HritGifGenerator(path)
     print(f"-> Initialized GIF generator for file: {path}")
     print(
