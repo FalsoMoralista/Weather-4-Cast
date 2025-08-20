@@ -51,16 +51,19 @@ class HritVisualizer:
         ir_fig, ir_axs = plt.subplots(4, 2, figsize=default_figsize)
         ir_axs = ir_axs.flatten()
 
+        ir_fig.suptitle("IR Channels", fontsize=16)
         self._plot_channels(image, self.IR_CHANNELS, ir_axs)
 
-        vis_fig, vis_axs = plt.subplots(1, 2, figsize=default_figsize)
+        vis_fig, vis_axs = plt.subplots(1, 2, figsize=(10, 5))
         vis_axs = vis_axs.flatten()
 
+        vis_fig.suptitle("Visible Channels", fontsize=16)
         self._plot_channels(image, self.VIS_CHANNELS, vis_axs)
 
-        wv_fig, wv_axs = plt.subplots(1, 2, figsize=default_figsize)
+        wv_fig, wv_axs = plt.subplots(1, 2, figsize=(10, 5))
         wv_axs = wv_axs.flatten()
 
+        wv_fig.suptitle("Water Vapor Channels", fontsize=16)
         self._plot_channels(image, self.WV_CHANNELS, wv_axs)
 
         ir_fig.tight_layout()
