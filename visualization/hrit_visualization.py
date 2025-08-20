@@ -12,31 +12,33 @@ class HritVisualizer:
         if not os.path.exists(path):
             raise FileNotFoundError(f"The file {path} does not exist.")
         self.file_path = path
+        self._initialize()
+
+    def _initialize(self):
+        f = h5py.File(self.file_path, "r")
+        self.data = f[self.KEY]
+        self.shape = self.data.shape
+        print(f"Keys in the file: {list(f.keys())}")
+        print("Data shape:", self.shape)
+        self.num_images = self.shape[0]
+        self.num_bands = self.shape[1]
 
     def visualize_as_grid(
         self,
         image_idx: int,
         output_path: str = "bands_vis.png",
     ):
-        f = h5py.File(self.file_path, "r")
-
-        data = f[self.KEY]
-
-        print("Data shape:", data.shape)
-
-        number_of_images = data.shape[0]
-        if image_idx < 0 or image_idx >= number_of_images:
+        if image_idx < 0 or image_idx >= self.number_of_images:
             raise ValueError(
-                f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {number_of_images} images."
+                f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {self.number_of_images} images."
             )
 
         fig, axs = plt.subplots(3, 4, figsize=(16, 12))
         axs = axs.flatten()
 
-        num_bands = data.shape[1]
-        image = data[image_idx]
+        image = self.data[image_idx]
 
-        for i in range(num_bands):
+        for i in range(self.num_bands):
             ax = axs[i]
             band_img = image[i]
             im = ax.imshow(band_img, cmap="gray")
