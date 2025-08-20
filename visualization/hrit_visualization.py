@@ -1,4 +1,5 @@
 import os
+import sys
 
 import h5py
 import matplotlib.pyplot as plt
@@ -45,3 +46,10 @@ class HritVisualizer:
 
         fig.savefig(output_path)
         fig.tight_layout()
+
+
+if __name__ == "__main__":
+    path = sys.argv[1]
+    visualizer = HritVisualizer(path)
+    visualizer.visualize_as_grid(image_idx=0)
+    print("-> Visualization saved to bands_vis.png")
