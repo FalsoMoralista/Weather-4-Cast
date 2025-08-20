@@ -23,7 +23,12 @@ class HritGifGenerator:
         self.num_images = self.shape[0]
         self.num_bands = self.shape[1]
 
-    def generate(self, channel: str, output_path: str = "hrit_animation.gif"):
+    def generate(self, channel: int, output_path: str = "hrit_animation.gif"):
+        if channel < 0 or channel >= self.num_bands:
+            raise ValueError(
+                f"Channel {channel} is out of bounds. Must be between 0 and {self.num_bands - 1}."
+            )
+
         images = []
         for i in range(self.num_images):
             band_img = self.data[i][channel]
