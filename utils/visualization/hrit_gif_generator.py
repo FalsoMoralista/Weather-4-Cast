@@ -2,6 +2,7 @@ import os
 import sys
 
 import h5py
+from PIL import Image
 
 
 class HritGifGenerator:
@@ -23,7 +24,23 @@ class HritGifGenerator:
         self.num_bands = self.shape[1]
 
     def generate(self, channel: str, output_path: str = "hrit_animation.gif"):
-        pass
+        images = []
+        for i in range(self.num_images):
+            band_img = self.data[i][channel]
+            img = Image.fromarray(band_img)
+            images.append(img)
+
+        if images:
+            images[0].save(
+                output_path,
+                save_all=True,
+                append_images=images[1:],
+                duration=200,
+                loop=0,
+            )
+            print(f"-> GIF saved to {output_path}")
+        else:
+            print("-> No images to save.")
 
 
 if __name__ == "__main__":
@@ -39,3 +56,4 @@ if __name__ == "__main__":
     )
     print(f"-> Channel selected: {channel}")
     generator.generate(channel)
+    print("-> GIF generation completed. Image saved to hrit_animation.gif")
