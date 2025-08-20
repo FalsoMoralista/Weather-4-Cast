@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 class OperaVisualization:
-    KEY = "REFL-BT"
+    KEY = "rates.crop"
 
     def __init__(self, path: str):
         if not os.path.exists(path):
