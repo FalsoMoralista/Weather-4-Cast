@@ -51,6 +51,11 @@ class HritVisualizer:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print(
+            "Usage: python hrit_visualization.py <path_to_h5_file> <image_index> <visualization_type>"
+        )
+        sys.exit(1)
     path = sys.argv[1]
     visualizer = HritVisualizer(path)
     visualizer.visualize_as_grid(image_idx=0)
