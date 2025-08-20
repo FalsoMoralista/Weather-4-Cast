@@ -28,9 +28,9 @@ class HritVisualizer:
         image_idx: int,
         output_path: str = "bands_visualization.png",
     ):
-        if image_idx < 0 or image_idx >= self.number_of_images:
+        if image_idx < 0 or image_idx >= self.num_images:
             raise ValueError(
-                f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {self.number_of_images} images."
+                f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {self.num_images} images."
             )
 
         fig, axs = plt.subplots(3, 4, figsize=(16, 12))
@@ -51,7 +51,7 @@ class HritVisualizer:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print("Usage: python hrit_visualization.py <path_to_h5_file> <image_index>")
         sys.exit(1)
     path = sys.argv[1]
