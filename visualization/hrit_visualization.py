@@ -26,7 +26,7 @@ class HritVisualizer:
     def visualize_as_grid(
         self,
         image_idx: int,
-        output_path: str = "bands_vis.png",
+        output_path: str = "bands_visualization.png",
     ):
         if image_idx < 0 or image_idx >= self.number_of_images:
             raise ValueError(
@@ -54,4 +54,4 @@ if __name__ == "__main__":
     path = sys.argv[1]
     visualizer = HritVisualizer(path)
     visualizer.visualize_as_grid(image_idx=0)
-    print("-> Visualization saved to bands_vis.png")
+    print("-> Visualization saved to bands_visualization.png")
