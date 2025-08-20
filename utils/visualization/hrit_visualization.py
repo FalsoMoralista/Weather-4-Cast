@@ -31,7 +31,7 @@ class HritVisualizer:
     def _plot_channels(self, image, channels: list[int], ax):
         for i, channel in enumerate(channels):
             band_img = image[channel]
-            sns.heatmap(band_img, ax=ax[i], cmap="summer", cbar=False)
+            sns.heatmap(band_img, ax=ax[i], cmap="viridis", cbar=False)
             ax[i].set_title(f"Channel {channel + 1}")
             ax[i].axis("off")
 
@@ -53,12 +53,12 @@ class HritVisualizer:
 
         self._plot_channels(image, self.IR_CHANNELS, ir_axs)
 
-        vis_fig, vis_axs = plt.subplots(2, 1, figsize=default_figsize)
+        vis_fig, vis_axs = plt.subplots(1, 2, figsize=default_figsize)
         vis_axs = vis_axs.flatten()
 
         self._plot_channels(image, self.VIS_CHANNELS, vis_axs)
 
-        wv_fig, wv_axs = plt.subplots(2, 1, figsize=default_figsize)
+        wv_fig, wv_axs = plt.subplots(1, 2, figsize=default_figsize)
         wv_axs = wv_axs.flatten()
 
         self._plot_channels(image, self.WV_CHANNELS, wv_axs)
