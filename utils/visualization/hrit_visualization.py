@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 class HritVisualizer:
     KEY = "REFL-BT"
 
+    IR_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7]
+    VIS_CHANNELS = [8, 9]
+    WV_CHANNELS = [10, 11]
+
     def __init__(self, path: str):
         if not os.path.exists(path):
             raise FileNotFoundError(f"The file {path} does not exist.")
