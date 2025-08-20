@@ -31,7 +31,7 @@ class HritGifGenerator:
 
         images = []
         for i in range(self.num_images):
-            band_img = self.data[i][channel]
+            band_img = self.data[i, channel, :]
             img = Image.fromarray(band_img)
             images.append(img)
 
