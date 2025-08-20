@@ -21,7 +21,7 @@ import torch.nn.functional as F
 from torch import inf 
 
 import src.models.autoencoder as AE
-# from timm.models.layers import trunc_normal_ 
+
 import os
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)

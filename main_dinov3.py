@@ -15,6 +15,8 @@ import yaml
 from src.utils.distributed import init_distributed
 from energy_based_dinov3 import main as app_main
 
+import torch 
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--fname', type=str,

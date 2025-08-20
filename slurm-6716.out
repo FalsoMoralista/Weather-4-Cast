@@ -60,6 +60,7 @@ INFO:dinov3:using rescale_coords=2 for rope new
 INFO:dinov3:using jitter_coords=None for rope new
 INFO:dinov3:using dtype=fp32 for rope new
 INFO:dinov3:using swiglu64 layer as FFN
+[W820 19:08:10.660182569 ProcessGroupNCCL.cpp:1479] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
 Dinov3 Model: DinoVisionTransformer(
   (patch_embed): PatchEmbed(
     (proj): Conv2d(3, 4096, kernel_size=(16, 16), stride=(16, 16))
@@ -89,4 +90,11 @@ Dinov3 Model: DinoVisionTransformer(
   (local_cls_norm): LayerNorm((4096,), eps=1e-05, elementwise_affine=True)
   (head): Identity()
 )
-[rank0]:[W817 23:43:11.890045779 ProcessGroupNCCL.cpp:1479] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+allocated mem from model loading: 12.509605884552002
+(24644, 11, 252, 252)
+tensor size: torch.Size([8, 11, 252, 252])
+x shape, after conv: torch.Size([8, 3, 252, 252])
+feature shape torch.Size([2, 4, 225, 4096])
+allocated mem from feature extraction: 12.509605884552002
+max mem allocated: 12.802380561828613
+Destroying process

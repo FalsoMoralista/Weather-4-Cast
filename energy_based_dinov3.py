@@ -56,7 +56,7 @@ from src.helper import (
     init_optimizer,
     init_opt,
     init_DC_opt,
-    build_cache_v2,
+    build_cache_v2
 )
 
 from src.models.joint_model import JointFTModel
@@ -73,12 +73,17 @@ import time
 from sklearn.metrics import accuracy_score
 
 
+from src.models.model_wrapper import ModelWrapper
+
+
 import pickle
 
 from torchvision import transforms
 from PIL import Image
 import random
 
+
+import h5py
 
 # --
 log_timings = True
@@ -202,24 +207,51 @@ def main(args, resume_preempt=False):
 
     load_path = None
 
-    
-
     if load_model:
         load_path = (
             "/home/lucianodourado/dinov3-weights/dinov3_vit7b16_pretrain_sat493m-a6675841.pth"
         )
-
-
+    
     model = torch.hub.load(
         '../dinov3',
         'dinov3_vit7b16',
         source='local',
         weights=load_path
-    )
+    ).to(device,  dtype=torch.bfloat16)
+    
     model.eval()
-    print('Dinov3 Model:', model)
 
-    exit(0)
+    print('Dinov3 Model:', model)
+    allocated_bytes = torch.cuda.memory_allocated()
+    model = ModelWrapper(model).to(device)
+
+    # Convert bytes to gigabytes
+    allocated_gb = allocated_bytes / (1024**3)
+    print('allocated mem from model loading:', allocated_gb)
+
+    f = h5py.File("dataset/w4c24/2020/HRIT/boxi_0015.train.reflbt0.ns.h5", "r")
+    data = f["REFL-BT"]
+    print(data.shape)
+
+    tensor = torch.from_numpy(f["REFL-BT"][:4]).to(device, dtype=torch.bfloat16)
+    tensor2 = torch.from_numpy(f["REFL-BT"][4:8]).to(device, dtype=torch.bfloat16)
+    tensor = torch.stack((tensor,tensor2), dim=0)
+    B, T, C, H, W = tensor.shape  # (2, 4, 11, 252, 252)
+    
+    tensor = tensor.view(B * T, C, H, W) # [8, 11, 252, 252]
+    print("tensor size:", tensor.size())
+    with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
+        features = model(tensor)
+        features = features.view(B, T, -1, features.size(-1))
+        print('feature shape', features.size())
+        allocated_gb = allocated_bytes / (1024**3)
+        print('allocated mem from feature extraction:', allocated_gb)
+        print('max mem allocated:', (torch.cuda.max_memory_allocated() / 1024**3))
+
+    print('Destroying process')
+    dist.destroy_process_group()
+    return 0
+    
 
 
     # -- make csv_logger
