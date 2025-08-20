@@ -3,6 +3,7 @@ import sys
 
 import h5py
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class HritVisualizer:
@@ -27,31 +28,46 @@ class HritVisualizer:
         self.num_images = self.shape[0]
         self.num_bands = self.shape[1]
 
+    def _plot_channels(self, image, channels: list[int], ax):
+        for i, channel in enumerate(channels):
+            band_img = image[channel]
+            sns.heatmap(band_img, ax=ax[i], cmap="gray", cbar=False)
+            ax[i].set_title(f"Channel {channel + 1}")
+            ax[i].axis("off")
+
     def visualize(
         self,
         image_idx: int,
-        output_path: str = "bands_visualization.png",
     ):
         if image_idx < 0 or image_idx >= self.num_images:
             raise ValueError(
                 f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {self.num_images} images."
             )
 
-        fig, axs = plt.subplots(3, 4, figsize=(16, 12))
-        axs = axs.flatten()
-
         image = self.data[image_idx]
 
-        for i in range(self.num_bands):
-            ax = axs[i]
-            band_img = image[i]
-            im = ax.imshow(band_img, cmap="gray")
-            ax.set_title(f"Spectral Band {i + 1}")
-            ax.axis("off")
-            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        ir_fig, ir_axs = plt.subplots(4, 2, figsize=(16, 12))
+        ir_axs = ir_axs.flatten()
 
-        fig.savefig(output_path)
-        fig.tight_layout()
+        self._plot_channels(image, self.IR_CHANNELS, ir_axs)
+
+        vis_fig, vis_axs = plt.subplots(2, 1, figsize=(16, 12))
+        vis_axs = vis_axs.flatten()
+
+        self._plot_channels(image, self.VIS_CHANNELS, vis_axs)
+
+        wv_fig, wv_axs = plt.subplots(2, 1, figsize=(16, 12))
+        wv_axs = wv_axs.flatten()
+
+        self._plot_channels(image, self.WV_CHANNELS, wv_axs)
+
+        ir_fig.tight_layout()
+        vis_fig.tight_layout()
+        wv_fig.tight_layout()
+
+        ir_fig.savefig("hrit_ir_bands_visualization.png")
+        vis_fig.savefig("hrit_vis_bands_visualization.png")
+        wv_fig.savefig("hrit_wv_bands_visualization.png")
 
 
 if __name__ == "__main__":
@@ -62,4 +78,4 @@ if __name__ == "__main__":
     image_index = int(sys.argv[2])
     visualizer = HritVisualizer(path)
     visualizer.visualize(image_idx=image_index)
-    print("-> Visualization saved to bands_visualization.png")
+    print("-> Visualizations saved")
