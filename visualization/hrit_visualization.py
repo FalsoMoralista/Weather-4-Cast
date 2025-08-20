@@ -54,9 +54,12 @@ if __name__ == "__main__":
     if len(sys.argv) != 4:
         print(
             "Usage: python hrit_visualization.py <path_to_h5_file> <image_index> <visualization_type>"
+            "\n<visualization_type> can be 0 for grid visualization and 1 for each band being an image."
         )
         sys.exit(1)
     path = sys.argv[1]
+    image_index = int(sys.argv[2])
+    visualization_type = sys.argv[3] if len(sys.argv) > 3 else 0
     visualizer = HritVisualizer(path)
     visualizer.visualize_as_grid(image_idx=0)
     print("-> Visualization saved to bands_visualization.png")
