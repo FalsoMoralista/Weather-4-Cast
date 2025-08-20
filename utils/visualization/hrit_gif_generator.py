@@ -3,6 +3,8 @@ import sys
 
 import h5py
 from PIL import Image
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class HritGifGenerator:
@@ -29,20 +31,34 @@ class HritGifGenerator:
                 f"Channel {channel} is out of bounds. Must be between 0 and {self.num_bands - 1}."
             )
 
-        output_path = f"hrit_animation_{channel}.gif"
+        if not os.path.exists('gifs'):
+            os.makedirs('gifs')
 
         images = []
         for i in range(self.num_images):
+            # Make a GIF only from the first 100 images in dataset
+            if i == 100:
+                break
             band_img = self.data[i, channel, :]
-            img = Image.fromarray(band_img)
+            figure = plt.Figure(figsize=(2.5, 2.5), dpi=100)
+            ax = figure.add_subplot()
+            sns.heatmap(band_img, cmap="viridis", ax=ax, cbar=False)
+            name = f'gifs/hrit_channel_{channel}_frame_{i}.jpg'
+            ax.axis('off')
+            figure.tight_layout()
+            figure.savefig(name)
+
+            img = Image.open(name)
             images.append(img)
+
+        output_path = f'hrit_gif_{channel}.gif'
 
         if images:
             images[0].save(
                 output_path,
                 save_all=True,
                 append_images=images[1:],
-                duration=200,
+                duration=100,
                 loop=0,
             )
             print(f"-> GIF saved to {output_path}")
