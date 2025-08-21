@@ -8,6 +8,8 @@ import h5py
 class TDDataset(Dataset):
     ROOT = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
 
+    HRIT_WINDOW_SIZE = 4
+
     HRIT_KEY = "REFL-BT"
 
     def __init__(self, dataset_path: str, type: str = "train"):
@@ -60,6 +62,20 @@ class TDDataset(Dataset):
             return self._get_hrit_val_size()
         else:
             raise ValueError(f"Unknown dataset type: {self.type}")
+
+    def _get_image_count(self, path: Path):
+        with h5py.File(path, "r") as file:
+            return file[self.HRIT_KEY].shape[0] - self.HRIT_WINDOW_SIZE + 1
+
+    def _build_index(self, type: str):
+        files = self._get_hrit_files_by_type(type)
+        index = {}
+        current_count = 0
+        for _, f in enumerate(files):
+            count = self._get_image_count(f)
+            index[f.name] = (current_count, count)
+            current_count = count
+        return index
 
     def __getitem__(self, idx):
         return None
