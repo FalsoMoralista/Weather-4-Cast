@@ -103,6 +103,6 @@ if __name__ == "__main__":
     print("HRIT Val Size:", dataset._get_hrit_val_size())
 
     print("Dataset Length:", len(dataset))
-    print("First item:", dataset[0])
-    print("Second item:", dataset[1])
-    print("Third item:", dataset[2])
+    print("First item:", dataset[0].shape)
+    print("Second item:", dataset[1].shape)
+    print("Third item:", dataset[2].shape)
