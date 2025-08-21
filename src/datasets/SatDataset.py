@@ -1,10 +1,9 @@
 from pathlib import Path
 
 from torch import tensor
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 import h5py
-from pprint import pprint
 
 
 class SatDataset(Dataset):
@@ -34,8 +33,6 @@ class SatDataset(Dataset):
 
         self.type = type
         self.hrit_index = self._build_index(type)
-        print("HRIT Index built for type:", type)
-        pprint(self.hrit_index)
 
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: str(x.absolute()))
@@ -100,10 +97,11 @@ class SatDataset(Dataset):
 
 if __name__ == "__main__":
     dataset = SatDataset(SatDataset.ROOT)
-    print("HRIT Train Size:", dataset._get_hrit_train_size())
-    print("HRIT Val Size:", dataset._get_hrit_val_size())
 
-    print("Dataset Length:", len(dataset))
-    print("First item:", dataset[0].shape)
-    print("Second item:", dataset[1].shape)
-    print("Third item:", dataset[2].shape)
+    print(f"Dataset length: {len(dataset)}")
+
+    loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    print(f"Loader length: {len(loader)}")
+
+    for i, data in enumerate(loader):
+        print(f"Batch {i}: {data.shape}")
