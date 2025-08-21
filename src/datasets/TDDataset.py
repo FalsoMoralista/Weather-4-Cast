@@ -8,7 +8,7 @@ import h5py
 class TDDataset(Dataset):
     ROOT = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
 
-    HRIT_KEY = "reflbt0"
+    HRIT_KEY = "REFL-BT"
 
     def __init__(self, dataset_path: str):
         self.dataset_path = dataset_path
