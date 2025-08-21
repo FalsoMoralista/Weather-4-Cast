@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from torch import tensor
 from torch.utils.data import Dataset
 
 import h5py
@@ -93,10 +94,15 @@ class SatDataset(Dataset):
                     data = file[self.HRIT_KEY][
                         idx - start : idx - start + self.HRIT_WINDOW_SIZE
                     ]
-                    return data
+                    return tensor(data)
 
 
 if __name__ == "__main__":
     dataset = SatDataset(SatDataset.ROOT)
     print("HRIT Train Size:", dataset._get_hrit_train_size())
     print("HRIT Val Size:", dataset._get_hrit_val_size())
+
+    print("Dataset Length:", len(dataset))
+    print("First item:", dataset[0])
+    print("Second item:", dataset[1])
+    print("Third item:", dataset[2])
