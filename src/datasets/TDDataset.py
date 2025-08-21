@@ -43,7 +43,12 @@ class TDDataset(Dataset):
         return self._get_hrit_size("val.reflbt0")
 
     def __len__(self):
-        return 0
+        if self.type == "train":
+            return self._get_hrit_train_size()
+        elif self.type == "val":
+            return self._get_hrit_val_size()
+        else:
+            raise ValueError(f"Unknown dataset type: {self.type}")
 
     def __getitem__(self, idx):
         return None
