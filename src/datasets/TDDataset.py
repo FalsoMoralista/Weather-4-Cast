@@ -49,6 +49,6 @@ class TDDataset(Dataset):
 
 if __name__ == "__main__":
     dataset = TDDataset(TDDataset.ROOT)
-    print(
-        f"Total HRIT size: {dataset._get_hrit_train_size() + dataset._get_hrit_val_size() + dataset._get_hrit_test_size()}"
-    )
+    print("HRIT Train Size:", dataset._get_hrit_train_size())
+    print("HRIT Val Size:", dataset._get_hrit_val_size())
+    print("HRIT Test Size:", dataset._get_hrit_test_size())
