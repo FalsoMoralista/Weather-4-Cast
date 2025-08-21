@@ -4,6 +4,7 @@ from torch import tensor
 from torch.utils.data import Dataset
 
 import h5py
+from pprint import pprint
 
 
 class SatDataset(Dataset):
@@ -34,7 +35,7 @@ class SatDataset(Dataset):
         self.type = type
         self.hrit_index = self._build_index(type)
         print("HRIT Index built for type:", type)
-        print(self.hrit_index)
+        pprint(self.hrit_index)
 
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: str(x.absolute()))
