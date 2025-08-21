@@ -35,20 +35,19 @@ class TDDataset(Dataset):
         else:
             raise ValueError(f"Unknown dataset type: {type}")
 
-    def _get_hrit_size(self, suffix: str):
+    def _get_hrit_size(self, type: str):
         size = 0
-        for p in self.hrit_path:
-            files = p.glob(f"*{suffix}*")
-            for f in files:
-                with h5py.File(f, "r") as file:
-                    size += file[self.HRIT_KEY].shape[0]
+        files = self._get_hrit_files_by_type(type)
+        for f in files:
+            with h5py.File(f, "r") as file:
+                size += file[self.HRIT_KEY].shape[0]
         return size
 
     def _get_hrit_train_size(self):
-        return self._get_hrit_size("train.reflbt0")
+        return self._get_hrit_size("train")
 
     def _get_hrit_val_size(self):
-        return self._get_hrit_size("val.reflbt0")
+        return self._get_hrit_size("val")
 
     def __len__(self):
         if self.type == "train":
