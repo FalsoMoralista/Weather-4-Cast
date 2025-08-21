@@ -37,7 +37,7 @@ class SatDataset(Dataset):
         print(self.hrit_index)
 
     def _sort_files_by_name(self, files: list[Path]):
-        return sorted(files, key=lambda x: x.name)
+        return sorted(files, key=lambda x: str(x.absolute()))
 
     def _get_hrit_files_by_type(self, type: str):
         files = []
