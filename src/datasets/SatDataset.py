@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
     print(f"Dataset length: {len(dataset)}")
 
-    loader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=4)
+    loader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4)
     print(f"Loader length: {len(loader)} - Batch size: {loader.batch_size}")
 
     for i, data in enumerate(loader):
