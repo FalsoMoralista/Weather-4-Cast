@@ -83,7 +83,7 @@ class SatDataset(Dataset):
         for _, f in enumerate(files):
             count = self._get_image_count(f)
             index[str(f.absolute())] = (current_count, count)
-            current_count = count
+            current_count += count
         return index
 
     def __getitem__(self, idx):
