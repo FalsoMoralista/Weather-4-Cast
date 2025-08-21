@@ -27,6 +27,14 @@ class TDDataset(Dataset):
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: x.name)
 
+    def _get_hrit_files_by_type(self, type: str):
+        if type == "train":
+            return [p.glob("*train.reflbt0*") for p in self.hrit_path]
+        elif type == "val":
+            return [p.glob("*val.reflbt0*") for p in self.hrit_path]
+        else:
+            raise ValueError(f"Unknown dataset type: {type}")
+
     def _get_hrit_size(self, suffix: str):
         size = 0
         for p in self.hrit_path:
