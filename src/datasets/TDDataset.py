@@ -74,12 +74,18 @@ class TDDataset(Dataset):
         current_count = 0
         for _, f in enumerate(files):
             count = self._get_image_count(f)
-            index[f.name] = (current_count, count)
+            index[str(f.absolute())] = (current_count, count)
             current_count = count
         return index
 
     def __getitem__(self, idx):
-        return None
+        for file_name, (start, count) in self.hrit_index.items():
+            if start <= idx < start + count:
+                with h5py.File(file_name, "r") as file:
+                    data = file[self.HRIT_KEY][
+                        idx - start : idx - start + self.HRIT_WINDOW_SIZE
+                    ]
+                    return data
 
 
 if __name__ == "__main__":
