@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 import h5py
 
 
-class TDDataset(Dataset):
+class SatDataset(Dataset):
     ROOT: str = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
     HRIT_WINDOW_SIZE: int = 4
     HRIT_KEY: str = "REFL-BT"
@@ -97,6 +97,6 @@ class TDDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = TDDataset(TDDataset.ROOT)
+    dataset = SatDataset(SatDataset.ROOT)
     print("HRIT Train Size:", dataset._get_hrit_train_size())
     print("HRIT Val Size:", dataset._get_hrit_val_size())
