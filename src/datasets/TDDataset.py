@@ -32,13 +32,13 @@ class TDDataset(Dataset):
         return size
 
     def _get_hrit_train_size(self):
-        return self._get_size("train.reflbt0")
+        return self._get_hrit_size("train.reflbt0")
 
     def _get_hrit_val_size(self):
-        return self._get_size("val.reflbt0")
+        return self._get_hrit_size("val.reflbt0")
 
     def _get_hrit_test_size(self):
-        return self._get_size("test.reflbt0")
+        return self._get_hrit_size("test.reflbt0")
 
     def __len__(self):
         return 0
