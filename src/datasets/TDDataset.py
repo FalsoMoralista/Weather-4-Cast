@@ -18,9 +18,12 @@ class TDDataset(Dataset):
 
         self.paths = [root / str(year) for year in self.years]
         hrit_path = [p / "HRIT" for p in self.paths]
-        self.hrit_path = sorted(hrit_path, key=lambda x: x.name)
+        self.hrit_path = self._sort_files_by_name(hrit_path)
         opera_path = [p / "OPERA" for p in self.paths]
-        self.opera_path = sorted(opera_path, key=lambda x: x.name)
+        self.opera_path = self._sort_files_by_name(opera_path)
+
+    def _sort_files_by_name(self, files: list[Path]):
+        return sorted(files, key=lambda x: x.name)
 
     def _get_hrit_size(self, suffix: str):
         size = 0
