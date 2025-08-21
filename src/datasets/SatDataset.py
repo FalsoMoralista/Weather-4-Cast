@@ -92,7 +92,7 @@ class SatDataset(Dataset):
                     data = file[self.HRIT_KEY][
                         idx - start : idx - start + self.HRIT_WINDOW_SIZE
                     ]
-                    return tensor(data)
+                    return tensor(data), tensor([])
 
 
 if __name__ == "__main__":
@@ -104,4 +104,5 @@ if __name__ == "__main__":
     print(f"Loader length: {len(loader)} - Batch size: {loader.batch_size}")
 
     for i, data in enumerate(loader):
-        print(f"Batch {i}: {data.shape}")
+        input, target = data
+        print(f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}")
