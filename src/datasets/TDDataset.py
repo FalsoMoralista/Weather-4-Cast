@@ -25,6 +25,7 @@ class TDDataset(Dataset):
         self.opera_path = self._sort_files_by_name(opera_path)
 
         self.type = type
+        self.hrit_index = self._build_index(type)
 
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: x.name)
