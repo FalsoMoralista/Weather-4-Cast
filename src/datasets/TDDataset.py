@@ -6,11 +6,17 @@ import h5py
 
 
 class TDDataset(Dataset):
-    ROOT = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
+    ROOT: str = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
+    HRIT_WINDOW_SIZE: int = 4
+    HRIT_KEY: str = "REFL-BT"
 
-    HRIT_WINDOW_SIZE = 4
-
-    HRIT_KEY = "REFL-BT"
+    type: str
+    dataset_path: str
+    paths: list[Path]
+    years: list[int]
+    hrit_path: list[Path]
+    opera_path: list[Path]
+    hrit_index: dict[str, tuple[int, int]]
 
     def __init__(self, dataset_path: str, type: str = "train"):
         self.dataset_path = dataset_path
@@ -26,6 +32,8 @@ class TDDataset(Dataset):
 
         self.type = type
         self.hrit_index = self._build_index(type)
+        print("HRIT Index built for type:", type)
+        print(self.hrit_index)
 
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: x.name)
