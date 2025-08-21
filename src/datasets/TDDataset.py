@@ -10,7 +10,7 @@ class TDDataset(Dataset):
 
     HRIT_KEY = "REFL-BT"
 
-    def __init__(self, dataset_path: str):
+    def __init__(self, dataset_path: str, type: str = "train"):
         self.dataset_path = dataset_path
         root = Path(self.dataset_path)
         years = root.glob("20*")
@@ -21,6 +21,8 @@ class TDDataset(Dataset):
         self.hrit_path = self._sort_files_by_name(hrit_path)
         opera_path = [p / "OPERA" for p in self.paths]
         self.opera_path = self._sort_files_by_name(opera_path)
+
+        self.type = type
 
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: x.name)
@@ -40,9 +42,6 @@ class TDDataset(Dataset):
     def _get_hrit_val_size(self):
         return self._get_hrit_size("val.reflbt0")
 
-    def _get_hrit_test_size(self):
-        return self._get_hrit_size("test.reflbt0")
-
     def __len__(self):
         return 0
 
@@ -54,4 +53,3 @@ if __name__ == "__main__":
     dataset = TDDataset(TDDataset.ROOT)
     print("HRIT Train Size:", dataset._get_hrit_train_size())
     print("HRIT Val Size:", dataset._get_hrit_val_size())
-    print("HRIT Test Size:", dataset._get_hrit_test_size())
