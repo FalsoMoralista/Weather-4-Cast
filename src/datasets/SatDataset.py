@@ -103,7 +103,12 @@ class SatDataset(Dataset):
                     "reflbt0.ns", "rates.crop"
                 )
                 with h5py.File(opera_file_name, "r") as opera:
-                    target = opera[self.HRIT_KEY][idx - start + self.OPERA_WINDOW_SIZE]
+                    target = opera[self.HRIT_KEY][
+                        idx + self.HRIT_WINDOW_SIZE - start : idx
+                        - start
+                        + self.HRIT_WINDOW_SIZE
+                        + self.OPERA_WINDOW_SIZE
+                    ]
                 return tensor(input), tensor(target)
 
 
