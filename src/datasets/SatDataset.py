@@ -128,3 +128,4 @@ if __name__ == "__main__":
     for i, data in enumerate(loader):
         input, target = data
         print(f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}")
+        break
