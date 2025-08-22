@@ -31,27 +31,28 @@ class HritGifGenerator:
                 f"Channel {channel} is out of bounds. Must be between 0 and {self.num_bands - 1}."
             )
 
-        if not os.path.exists('gifs'):
-            os.makedirs('gifs')
+        if not os.path.exists("gifs"):
+            os.makedirs("gifs")
 
         images = []
         for i in range(self.num_images):
-            # Make a GIF only from the first 100 images in dataset
-            if i == 100:
+            if i < 1000:
+                continue
+            if i == 1200:
                 break
             band_img = self.data[i, channel, :]
             figure = plt.Figure(figsize=(2.5, 2.5), dpi=100)
             ax = figure.add_subplot()
             sns.heatmap(band_img, cmap="viridis", ax=ax, cbar=False)
-            name = f'gifs/hrit_channel_{channel}_frame_{i}.jpg'
-            ax.axis('off')
+            name = f"gifs/hrit_channel_{channel}_frame_{i}.jpg"
+            ax.axis("off")
             figure.tight_layout()
             figure.savefig(name)
 
             img = Image.open(name)
             images.append(img)
 
-        output_path = f'hrit_gif_{channel}.gif'
+        output_path = f"hrit_gif_{channel}.gif"
 
         if images:
             images[0].save(
