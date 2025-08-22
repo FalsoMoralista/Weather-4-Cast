@@ -3,6 +3,7 @@ import sys
 
 import h5py
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class OperaVisualization:
@@ -33,21 +34,13 @@ class OperaVisualization:
                 f"Image index {image_idx} is out of bounds for the dataset, min: 0, max: {self.num_images} images."
             )
 
-        fig, axs = plt.subplots(3, 4, figsize=(16, 12))
-        axs = axs.flatten()
+        fig = plt.figure(figsize=(16, 12))
 
-        image = self.data[image_idx]
+        image = self.data[image_idx][0]
+        sns.heatmap(image, cmap="viridis", cbar=False)
 
-        for i in range(self.num_bands):
-            ax = axs[i]
-            band_img = image[i]
-            im = ax.imshow(band_img, cmap="gray")
-            ax.set_title(f"Spectral Band {i + 1}")
-            ax.axis("off")
-            fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-
-        fig.savefig(output_path)
         fig.tight_layout()
+        fig.savefig(output_path)
 
 
 if __name__ == "__main__":
