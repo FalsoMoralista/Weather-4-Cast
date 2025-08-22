@@ -108,6 +108,12 @@ class SatDataset(Dataset):
                         idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
                     )
                     target = opera[self.HRIT_KEY][target_start:target_end]
+                print("-> For index", idx)
+                print("-> Reading input from:", input_start, "to", input_end)
+                print("-> Reading target from:", target_start, "to", target_end)
+                print(
+                    "================================================================="
+                )
                 return tensor(input), tensor(target)
 
 
