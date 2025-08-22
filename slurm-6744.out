@@ -1,0 +1,8 @@
+/home/lucianodourado/micromamba/envs/dinov3/lib/python3.11/site-packages/timm/models/layers/__init__.py:48: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Traceback (most recent call last):
+  File "/home/lucianodourado/weather-4-cast/main_dinov3.py", line 16, in <module>
+    from energy_based_dinov3 import main as app_main
+  File "/home/lucianodourado/weather-4-cast/energy_based_dinov3.py", line 63, in <module>
+    from src.models.vision_transformer import CustomVisionTransformer
+ImportError: cannot import name 'CustomVisionTransformer' from 'src.models.vision_transformer' (/home/lucianodourado/weather-4-cast/src/models/vision_transformer.py)
