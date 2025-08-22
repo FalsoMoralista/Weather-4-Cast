@@ -36,14 +36,9 @@ from torch.nn.parallel import DistributedDataParallel
 from src.masks.multiblock import MaskCollator as MBMaskCollator
 from src.masks.utils import apply_masks
 from src.utils.distributed import init_distributed, AllReduce
-from src.utils.logging import CSVLogger, gpu_timer, grad_logger, AverageMeter
+from src.utils.logging import CSVLogger, gpu_timer, AverageMeter#, grad_logger
 
 from functools import partial
-
-#from src.datasets.FineTuningDataset import make_GenericDataset
-#from src.datasets.triplet_dataset import make_TripletDataset
-
-#from src.datasets.paired_batch_dataset import make_paired_batch_dataset
 
 from sklearn.neighbors import NearestNeighbors
 
@@ -60,7 +55,8 @@ from src.helper import (
 )
 
 from src.models.joint_model import JointFTModel
-from src.models.vision_transformer import CustomVisionTransformer
+
+from src.models.vision_transformer import VisionTransformer
 
 #from src.transforms import make_transforms
 import time
@@ -211,23 +207,27 @@ def main(args, resume_preempt=False):
         load_path = (
             "/home/lucianodourado/dinov3-weights/dinov3_vit7b16_pretrain_sat493m-a6675841.pth"
         )
+
+    vjepa = VisionTransformer(img_size=(252,252), patch_size=16, mlp_ratio=4, num_frames=4, use_rope=True, embed_dim=4096, num_heads=32, depth=8, tubelet_size=1, handle_nonsquare_inputs=False, ignore_patches=True)
+    vjepa.patch_embed = nn.Identity()
     
-    model = torch.hub.load(
+    total_params = sum(p.numel() for p in vjepa.parameters())
+    print(f"V-jepa Total parameters: {total_params/1.0e9} (Billion)")
+
+    dinov3 = torch.hub.load(
         '../dinov3',
         'dinov3_vit7b16',
         source='local',
         weights=load_path
-    ).to(device,  dtype=torch.bfloat16)
+    )
     
-    model.eval()
+    print('Dinov3 Model:', dinov3)
 
-    print('Dinov3 Model:', model)
+    model = ModelWrapper(backbone=dinov3, vjepa=vjepa).to(device, dtype=torch.bfloat16)
+
     allocated_bytes = torch.cuda.memory_allocated()
-    model = ModelWrapper(model).to(device)
-
-    # Convert bytes to gigabytes
     allocated_gb = allocated_bytes / (1024**3)
-    print('allocated mem from model loading:', allocated_gb)
+    print('allocated mem from model setup:', allocated_gb)
 
     f = h5py.File("dataset/w4c24/2020/HRIT/boxi_0015.train.reflbt0.ns.h5", "r")
     data = f["REFL-BT"]
@@ -237,12 +237,9 @@ def main(args, resume_preempt=False):
     tensor2 = torch.from_numpy(f["REFL-BT"][4:8]).to(device, dtype=torch.bfloat16)
     tensor = torch.stack((tensor,tensor2), dim=0)
     B, T, C, H, W = tensor.shape  # (2, 4, 11, 252, 252)
-    
-    tensor = tensor.view(B * T, C, H, W) # [8, 11, 252, 252]
     print("tensor size:", tensor.size())
     with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
         features = model(tensor)
-        features = features.view(B, T, -1, features.size(-1))
         print('feature shape', features.size())
         allocated_gb = allocated_bytes / (1024**3)
         print('allocated mem from feature extraction:', allocated_gb)
