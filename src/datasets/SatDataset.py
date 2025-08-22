@@ -75,7 +75,12 @@ class SatDataset(Dataset):
 
     def _get_image_count(self, path: Path):
         with h5py.File(path, "r") as file:
-            return file[self.HRIT_KEY].shape[0] - self.HRIT_WINDOW_SIZE + 1
+            return (
+                file[self.HRIT_KEY].shape[0]
+                - self.OPERA_WINDOW_SIZE
+                - self.HRIT_WINDOW_SIZE
+                + 1
+            )
 
     def _build_index(self, type: str):
         files = self._get_hrit_files_by_type(type)
