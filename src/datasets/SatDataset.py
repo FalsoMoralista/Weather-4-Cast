@@ -10,6 +10,8 @@ class SatDataset(Dataset):
     ROOT: str = "/home/lucianodourado/weather-4-cast/dataset/w4c24"
     HRIT_WINDOW_SIZE: int = 4
     HRIT_KEY: str = "REFL-BT"
+    OPERA_KEY: str = "rates.crop"
+    OPERA_WINDOW_SIZE: int = 16
 
     type: str
     dataset_path: str
@@ -89,11 +91,15 @@ class SatDataset(Dataset):
         for file_name, (start, count) in self.hrit_index.items():
             if start <= idx < start + count:
                 hrit = h5py.File(file_name, "r")
-                opera = h5py.File(file_name.replace("HRIT", "OPERA"), "r")
-                data = hrit[self.HRIT_KEY][
+                opera_file_name = file_name.replace("HRIT", "OPERA").replace(
+                    "reflbt0.ns", "rates.crop"
+                )
+                opera = h5py.File(opera_file_name, "r")
+                input = hrit[self.HRIT_KEY][
                     idx - start : idx - start + self.HRIT_WINDOW_SIZE
                 ]
-                return tensor(data), tensor([])
+                target = opera[self.HRIT_KEY][idx - start + self.OPERA_WINDOW_SIZE]
+                return tensor(input), tensor(target)
 
 
 if __name__ == "__main__":
