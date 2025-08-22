@@ -88,11 +88,12 @@ class SatDataset(Dataset):
     def __getitem__(self, idx):
         for file_name, (start, count) in self.hrit_index.items():
             if start <= idx < start + count:
-                with h5py.File(file_name, "r") as file:
-                    data = file[self.HRIT_KEY][
-                        idx - start : idx - start + self.HRIT_WINDOW_SIZE
-                    ]
-                    return tensor(data), tensor([])
+                hrit = h5py.File(file_name, "r")
+                opera = h5py.File(file_name.replace("HRIT", "OPERA"), "r")
+                data = hrit[self.HRIT_KEY][
+                    idx - start : idx - start + self.HRIT_WINDOW_SIZE
+                ]
+                return tensor(data), tensor([])
 
 
 if __name__ == "__main__":
