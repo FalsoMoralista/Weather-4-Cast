@@ -96,19 +96,18 @@ class SatDataset(Dataset):
         for file_name, (start, count) in self.hrit_index.items():
             if start <= idx < start + count:
                 with h5py.File(file_name, "r") as hrit:
-                    input = hrit[self.HRIT_KEY][
-                        idx - start : idx - start + self.HRIT_WINDOW_SIZE
-                    ]
+                    input_start = idx - start
+                    input_end = input_start + self.HRIT_WINDOW_SIZE
+                    input = hrit[self.HRIT_KEY][input_start:input_end]
                 opera_file_name = file_name.replace("HRIT", "OPERA").replace(
                     "reflbt0.ns", "rates.crop"
                 )
                 with h5py.File(opera_file_name, "r") as opera:
-                    target = opera[self.HRIT_KEY][
-                        idx + self.HRIT_WINDOW_SIZE - start : idx
-                        - start
-                        + self.HRIT_WINDOW_SIZE
-                        + self.OPERA_WINDOW_SIZE
-                    ]
+                    target_start = idx + self.HRIT_WINDOW_SIZE - start
+                    target_end = (
+                        idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
+                    )
+                    target = opera[self.HRIT_KEY][target_start:target_end]
                 return tensor(input), tensor(target)
 
 
