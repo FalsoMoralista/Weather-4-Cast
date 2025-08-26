@@ -21,8 +21,10 @@ class SatDataset(Dataset):
     opera_path: list[Path]
     hrit_index: dict[str, tuple[int, int]]
 
-    def __init__(self, dataset_path: str, type: str = "train"):
+    def __init__(self, dataset_path: str, type: str = "train", transform=None):
+        super().__init__()
         self.dataset_path = dataset_path
+        self.transform = transform
         root = Path(self.dataset_path)
         years = root.glob("20*")
         self.years = sorted([int(year.name) for year in years if year.is_dir()])
