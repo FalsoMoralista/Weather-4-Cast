@@ -116,6 +116,8 @@ class SatDataset(Dataset):
                 print(
                     "================================================================="
                 )
+                if self.transform:
+                    input = self.transform(input)
                 return tensor(input), tensor(target)
 
 
