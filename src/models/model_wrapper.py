@@ -10,6 +10,7 @@ class ModelWrapper(nn.Module):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
         self.backbone.eval()
+        self.backbone.requires_grad_(False)
         self.vjepa = vjepa
         self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
@@ -27,8 +28,8 @@ class ModelWrapper(nn.Module):
 
         with torch.inference_mode():
             features = self.backbone.forward_features(x)
-            tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
-        
+        tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
+        print('tokens:', tokens.size())
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone()

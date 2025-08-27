@@ -267,8 +267,13 @@ def main(args, resume_preempt=False):
         'dinov3_vit7b16',
         source='local',
         weights=load_path
-    )
+    ).to(device, dtype=torch.bfloat16)
+
+    dinov3 = torch.compile(dinov3, mode="reduce-overhead")    
     
+    #for p in dinov3.parameters():
+    #    p.requires_grad = False
+
     print('Dinov3 Model:', dinov3)
 
     model = ModelWrapper(backbone=dinov3, vjepa=vjepa, patch_size=16).to(device)
@@ -351,8 +356,8 @@ def main(args, resume_preempt=False):
         for itr, (image, label) in enumerate(supervised_loader_train):
             
             def load_imgs():
-                img = image.to(device, non_blocking=True)
-                target = label.to(device, non_blocking=True)
+                img = image.to(device, non_blocking=True, dtype=torch.float32)
+                target = label.to(device, non_blocking=True, dtype=torch.float32)
                 return (img, target)
 
             def train_step():
@@ -487,7 +492,9 @@ def main(args, resume_preempt=False):
         vtime = gpu_timer(evaluate)
         
         model.module.train(True)
-        model.module.backbone.train(False)
+        model.module.backbone.eval()
+        model.module.backbone.requires_grad_(False)
+
 
         params = sum(p.numel() for p in model.module.parameters() if p.requires_grad)
         print(f"Model Total parameters: {params/1.0e9} == {total_params/1.0e9}? ")
