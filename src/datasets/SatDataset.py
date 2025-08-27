@@ -3,7 +3,59 @@ from pathlib import Path
 from torch import tensor
 from torch.utils.data import Dataset, DataLoader
 
+from torchvision import datasets, transforms
+from timm.data import create_transform
+
+
+import torch.nn.functional as F
+
 import h5py
+
+from logging import getLogger
+
+import torch
+import torchvision
+
+_GLOBAL_SEED = 0
+logger = getLogger()
+
+
+def make_sat_dataset(
+    transform,
+    batch_size,
+    collator=None,
+    pin_mem=True,
+    num_workers=8,
+    world_size=1,
+    rank=0,
+    root_path=None,
+    image_folder=None,
+    training=True,
+    copy_data=False,
+    drop_last=False,
+):
+    
+    dataset = SatDataset(SatDataset.ROOT, type='train' if training == True else 'val')    
+
+    logger.info('Sat dataset created')
+    
+    dist_sampler = torch.utils.data.distributed.DistributedSampler(
+        dataset=dataset,
+        num_replicas=world_size,
+        rank=rank)
+    
+    data_loader = torch.utils.data.DataLoader(
+        dataset,
+        collate_fn=collator,
+        sampler=dist_sampler,
+        batch_size=batch_size,
+        drop_last=drop_last,
+        pin_memory=pin_mem,
+        num_workers=num_workers,
+        persistent_workers=False)
+    logger.info('Sat Dataset dataloader created')
+
+    return dataset, data_loader, dist_sampler
 
 
 class SatDataset(Dataset):
@@ -21,8 +73,9 @@ class SatDataset(Dataset):
     opera_path: list[Path]
     hrit_index: dict[str, tuple[int, int]]
 
-    def __init__(self, dataset_path: str, type: str = "train"):
+    def __init__(self, dataset_path: str, type: str = "train", input_size=(224,224)):
         self.dataset_path = dataset_path
+        self.input_size = input_size
         root = Path(self.dataset_path)
         years = root.glob("20*")
         self.years = sorted([int(year.name) for year in years if year.is_dir()])
@@ -108,13 +161,15 @@ class SatDataset(Dataset):
                         idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
                     )
                     target = opera[self.OPERA_KEY][target_start:target_end]
-                print("-> For index", idx)
-                print("-> Reading input from:", input_start, "to", input_end)
-                print("-> Reading target from:", target_start, "to", target_end)
-                print(
-                    "================================================================="
-                )
-                return tensor(input), tensor(target)
+
+                #print("-> For index", idx)
+                #print("-> Reading input from:", input_start, "to", input_end)
+                #print("-> Reading target from:", target_start, "to", target_end)
+                #print(
+                #    "================================================================="
+                #)
+                input = F.interpolate(tensor(input), size=self.input_size, mode='bicubic')
+                return input, tensor(target)
 
 
 if __name__ == "__main__":
