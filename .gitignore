@@ -4,3 +4,6 @@ dataset/
 credentials
 gifs/
 ._*
+__pycache__/
+*.py[cod]
+.venv
