@@ -17,7 +17,7 @@ from timm.data import create_transform
 from torch.utils.data import Dataset, DataLoader
 
 from torchvision import datasets, transforms
-from timm.data import create_transform
+
 
 _GLOBAL_SEED = 0
 logger = getLogger()

@@ -52,6 +52,7 @@ def process_main(rank, fname, world_size, devices):
     world_size, rank = init_distributed(rank_and_world_size=(rank, world_size))
     logger.info(f'Running... (rank: {rank}/{world_size})')
     app_main(args=params)
+    torch.distributed.destroy_process_group()
 
 
 if __name__ == '__main__':

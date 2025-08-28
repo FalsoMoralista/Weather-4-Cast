@@ -161,7 +161,7 @@ class VisionTransformer(nn.Module):
     def no_weight_decay(self):
         return {}
 
-    def forward(self, x, masks=None):
+    def forward(self, x, T, H_patches, W_patches, masks=None, tokenize=False):
         """
         :param x: input image/video
         :param masks: indices of patch tokens to mask (remove)
@@ -169,33 +169,36 @@ class VisionTransformer(nn.Module):
         if masks is not None and not isinstance(masks, list):
             masks = [masks]
 
-        # Tokenize input
-        # Image
-        if x.ndim == 4:
-            _, _, H, W = x.shape
-            T = 1
-        # Video
-        elif x.ndim == 5:
-            _, _, T, H, W = x.shape
-            T = T // self.tubelet_size
-        if not self.ignore_patches:
+        if tokenize:
+            # Tokenize input
+            # Image
+            if x.ndim == 4:
+                _, _, H, W = x.shape
+                T = 1
+            # Video
+            elif x.ndim == 5:
+                _, _, T, H, W = x.shape
+                T = T // self.tubelet_size
             H_patches = H // self.patch_size
             W_patches = W // self.patch_size
-        if not self.handle_nonsquare_inputs:
-            T = H_patches = W_patches = None
+            if not self.handle_nonsquare_inputs:
+                T = H_patches = W_patches = None
 
-        if not self.use_rope:
-            pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
-            x = self.patch_embed(x)
-            x += pos_embed
-        else:
-            x = self.patch_embed(x)
+            if not self.use_rope:
+                pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
+                x = self.patch_embed(x)
+                x += pos_embed
+            else:
+                x = self.patch_embed(x)
 
         # Mask away unwanted tokens (if masks provided)
         if masks is not None:
             x = apply_masks(x, masks)
             masks = torch.cat(masks, dim=0)
 
+        if T is not None:
+            T = T // self.tubelet_size
+            
         # Fwd prop
         outs = []
         for i, blk in enumerate(self.blocks):
@@ -274,6 +277,8 @@ class VisionTransformer(nn.Module):
             )
             pos_embed = pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
             return pos_embed
+
+
 
 
 def vit_large(patch_size=16, **kwargs):

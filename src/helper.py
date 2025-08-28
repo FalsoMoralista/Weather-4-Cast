@@ -28,38 +28,6 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 
 
-def load_checkpoint(
-    device,
-    r_path,
-    encoder,
-    predictor,
-    target_encoder,
-    opt,
-    scaler,
-):
-    try:
-        checkpoint = torch.load(r_path, map_location=torch.device('cpu'))
-        epoch = checkpoint['epoch']
-        
-        # -- loading encoder
-        pretrained_dict = checkpoint['encoder']
-        msg = encoder.load_state_dict(pretrained_dict)
-        logger.info(f'loaded pretrained encoder from epoch {epoch} with msg: {msg}')
-
-        # -- loading target_encoder
-        if target_encoder is not None:
-            print(list(checkpoint.keys()))
-            pretrained_dict = checkpoint['target_encoder']
-            msg = target_encoder.load_state_dict(pretrained_dict)
-            logger.info(f'loaded pretrained encoder from epoch {epoch} with msg: {msg}')
-        del checkpoint
-
-    except Exception as e:
-        logger.info(f'Encountered exception when loading checkpoint {e}')
-        epoch = 0
-
-    return encoder, predictor, target_encoder, opt, scaler, epoch
-
 def load_DC_checkpoint(
     device,
     r_path,
@@ -237,106 +205,8 @@ def init_model(
     return encoder, predictor
 
 
-def build_cache_v2(data_loader, device, target_encoder, path, epoch=0, proj_embed_dim=1280, joint_embedding = False, dinov2=False, hierarchical_classifier=None):   
-    target_encoder.eval()
-    if not hierarchical_classifier is None: 
-        hierarchical_classifier.eval()
-
-    items = []
-    def forward_inputs():
-        for itr, (sample, target) in enumerate(data_loader):
-            def load_imgs():
-                samples = sample.to(device, non_blocking=True)
-                targets = target.to(device, non_blocking=True)
-                return (samples, targets)
-            imgs, _ = load_imgs()
-            with torch.amp.autocast('cuda', dtype=torch.bfloat16, enabled=True):            
-                # TODO: review normalization below
-                with torch.inference_mode():
-                    if joint_embedding:
-                        _, h = target_encoder(imgs)
-                    else:                     
-                        h = target_encoder(imgs)
-                if not dinov2:
-                    #h = F.layer_norm(h, (h.size(-1),)) # Normalize over feature-dim 
-                    h = torch.mean(h, dim=1) # Mean over patch-level representation and squeeze
-                    h = torch.squeeze(h, dim=1)
-
-                h = h.to(device=torch.device('cpu'), dtype=torch.float32)
-                items.append((h, target))
-
-    def build_feature_cache():
-        cache = {}        
-        for output, target in items:
-            for x, y in zip(output, target):
-                class_id = y.item()
-                if not class_id in cache:
-                    cache[class_id] = []                    
-                cache[class_id].append(x)
-        return cache
-    if not os.path.exists(path + f'/cached_features_{proj_embed_dim}_epoch_{epoch}.pt'):
-        logger.info(f'Cached features not detected for epoch: {epoch}, building cache')        
-        forward_inputs()
-        cache = build_feature_cache()
-        torch.save(cache, path + f'/cached_features_{proj_embed_dim}_epoch_{epoch}.pt')
-    else:
-        logger.info(f'Loading cached features at {path}')        
-        cache = torch.load(path + f'/cached_features_{proj_embed_dim}_epoch_{epoch}.pt')        
-    target_encoder.train(True)
-    
-    if not hierarchical_classifier is None: 
-        hierarchical_classifier.train(True)
-
-    return cache
-
-def build_cache(data_loader, device, target_encoder, hierarchical_classifier, autoencoder, path):   
-
-    target_encoder.eval()
-    autoencoder.eval()
-    hierarchical_classifier.eval()
-
-    items = []
-    def forward_inputs():
-        with torch.no_grad():
-            for itr, (sample, target) in enumerate(data_loader):
-                def load_imgs():
-                    samples = sample.to(device, non_blocking=True)
-                    targets = target.to(device, non_blocking=True)
-                    return (samples, targets)
-                imgs, _ = load_imgs()            
-                with torch.cuda.amp.autocast(dtype=torch.bfloat16, enabled=True):            
-                    h = target_encoder(imgs)
-                    h = torch.mean(h, dim=1) # Mean over patch-level representation and squeeze
-                    h = torch.squeeze(h, dim=1) 
-                    h = F.layer_norm(h, (h.size(-1),)) # Normalize over feature-dim 
-                    #_, _, _, child_proj_emb = hierarchical_classifier(h, device)                    
-                    # We performed this modification such that the clustering feature s 
-                    _, bottleneck_output = autoencoder(h, device) 
-                    items.append((bottleneck_output, target))
-    def build_cache():
-        cache = {}        
-        for bottleneck_output, target in items:
-            bottleneck_output = bottleneck_output.to(device=torch.device('cpu'), dtype=torch.float32)
-            for x, y in zip(bottleneck_output, target):
-                class_id = y.item()
-                if not class_id in cache:
-                    cache[class_id] = []                    
-                cache[class_id].append(x)
-        return cache
-    if not os.path.exists(path + '/cached_features_epoch_0.pt'):
-        forward_inputs()
-        cache = build_cache()
-        torch.save(cache, path + '/cached_features_epoch_0.pt')
-    else:
-        cache = torch.load(path + '/cached_features_epoch_0.pt')        
-    autoencoder.train(True)
-    target_encoder.train(True)
-    hierarchical_classifier.train(True)
-    return cache
-
-def init_opt(
+def init_vjepa_opt(
     encoder,
-    predictor,
     iterations_per_epoch,
     start_lr,
     ref_lr,
@@ -345,31 +215,23 @@ def init_opt(
     wd=1e-6,
     final_wd=1e-6,
     final_lr=0.0,
-    use_bfloat16=False,
-    ipe_scale=1.25
+    use_bfloat16=True,
+    ipe_scale=1.25,
+    betas=(0.9, 0.999),
+    eps=1e-8,
+    zero_init_bias_wd=True,
 ):
     param_groups = [
+        {"params": (p for n, p in encoder.named_parameters() if ("bias" not in n) and (len(p.shape) != 1))},
         {
-            'params': (p for n, p in encoder.named_parameters()
-                       if ('bias' not in n) and (len(p.shape) != 1))
-        }, {
-            'params': (p for n, p in predictor.named_parameters()
-                       if ('bias' not in n) and (len(p.shape) != 1))
-        }, {
-            'params': (p for n, p in encoder.named_parameters()
-                       if ('bias' in n) or (len(p.shape) == 1)),
-            'WD_exclude': True,
-            'weight_decay': 0 
-        }, {
-            'params': (p for n, p in predictor.named_parameters()
-                       if ('bias' in n) or (len(p.shape) == 1)),
-            'WD_exclude': True,
-            'weight_decay': 0
+            "params": (p for n, p in encoder.named_parameters() if ("bias" in n) or (len(p.shape) == 1)),
+            "WD_exclude": zero_init_bias_wd,
+            "weight_decay": 0,
         }
     ]
 
-    logger.info('Using AdamW')
-    optimizer = torch.optim.AdamW(param_groups)
+    optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps)
+    
     scheduler = WarmupCosineSchedule(
         optimizer,
         warmup_steps=int(warmup*iterations_per_epoch),
@@ -384,117 +246,3 @@ def init_opt(
         T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
     scaler = torch.amp.GradScaler('cuda') if use_bfloat16 else None
     return optimizer, scaler, scheduler, wd_scheduler
-
-
-def init_optimizer(
-    iterations_per_epoch,
-    start_lr,
-    ref_lr,
-    warmup,
-    num_epochs,
-    ipe_scale=1.25,
-    backbone=None,
-    projector=None,
-    encoder=None,
-    wd=1e-6,
-    final_wd=1e-6,
-    final_lr=0.0,
-    use_bfloat16=False
-    ):
-    
-    if backbone is not None:
-        param_groups = [
-            {
-                'params': (p for n, p in backbone.named_parameters()
-                        if ('bias' not in n) and (len(p.shape) != 1))
-            }, {
-                'params': (p for n, p in projector.named_parameters()
-                        if ('bias' not in n) and (len(p.shape) != 1))
-            }, {
-                'params': (p for n, p in backbone.named_parameters()
-                        if ('bias' in n) or (len(p.shape) == 1)),
-                'WD_exclude': True,
-                'weight_decay': 0 
-            }, {
-                'params': (p for n, p in projector.named_parameters()
-                        if ('bias' in n) or (len(p.shape) == 1)),
-                'WD_exclude': True,
-                'weight_decay': 0
-            }
-        ]
-    elif encoder is not None:       
-        param_groups = [
-            {
-                'params': (p for n, p in encoder.named_parameters()
-                        if ('bias' not in n) and (len(p.shape) != 1))
-            }, {
-                'params': (p for n, p in encoder.named_parameters()
-                        if ('bias' in n) or (len(p.shape) == 1)),
-                'WD_exclude': True,
-                'weight_decay': 0 
-            }
-        ]
-    else:
-        print('Building projector optimizer')
-        param_groups = [
-            {
-                'params': (p for n, p in projector.named_parameters()
-                        if ('bias' not in n) and (len(p.shape) != 1))
-            }, {
-                'params': (p for n, p in projector.named_parameters()
-                        if ('bias' in n) or (len(p.shape) == 1)),
-                'WD_exclude': True,
-                'weight_decay': 0
-            }
-        ]        
-
-    logger.info('Using AdamW')
-    optimizer = torch.optim.AdamW(param_groups)
-    scheduler = WarmupCosineSchedule(
-        optimizer,
-        warmup_steps=int(warmup*iterations_per_epoch),
-        start_lr=start_lr,
-        ref_lr=ref_lr,
-        final_lr=final_lr,
-        T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
-    wd_scheduler = CosineWDSchedule(
-        optimizer,
-        ref_wd=wd,
-        final_wd=final_wd,
-        T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
-    scaler = torch.amp.GradScaler('cuda') if use_bfloat16 else None
-    return optimizer, scaler, scheduler, wd_scheduler
-
-
-def init_DC_opt(
-    model,
-    iterations_per_epoch,
-    start_lr,
-    ref_lr,
-    warmup,
-    num_epochs,
-    wd=1e-6,
-    final_wd=1e-6,
-    final_lr=0.0,
-    use_bfloat16=False,
-    ipe_scale=1.25
-):
-
-    logger.info('Using AdamW')
-    optimizer = torch.optim.AdamW(model.parameters())
-    
-    scheduler = WarmupCosineSchedule(
-        optimizer,
-        warmup_steps=int(warmup*iterations_per_epoch),
-        start_lr=start_lr,
-        ref_lr=ref_lr,
-        final_lr=final_lr,
-        T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
-    
-    wd_scheduler = CosineWDSchedule(
-        optimizer,
-        ref_wd=wd,
-        final_wd=final_wd,
-        T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
-    scaler = NativeScalerWithGradNormCount() if use_bfloat16 else None
-    return optimizer, scaler, scheduler, wd_scheduler 
