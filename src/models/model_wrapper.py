@@ -5,7 +5,14 @@ import torchvision.transforms as T
 
 
 class ModelWrapper(nn.Module):
-    def __init__(self, backbone, vjepa, patch_size):
+    def __init__(
+        self,
+        backbone,
+        vjepa,
+        patch_size,
+        dim_in=4096,
+        dim_out=2048,
+    ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
         self.backbone.eval()
@@ -20,7 +27,7 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
-        self.dim_reduction = nn.Linear(4096, 2048)  # B, T*196, 2048
+        self.dim_reduction = nn.Linear(dim_in, dim_out)  # B, T*196, 2048
         self.reduction_act = nn.GELU()
         self.time_strecher = nn.Conv3d(
             4,
@@ -30,8 +37,9 @@ class ModelWrapper(nn.Module):
             padding=1,
         )  # B, 16, T*196, 2048
         self.strecher_act = nn.GELU()
+        self.decoder_query = nn.Parameter(torch.randn(16 * 14 * 14, dim_out))
         self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(d_model=2048, nhead=16, batch_first=True),
+            nn.TransformerDecoderLayer(d_model=dim_out, nhead=16, batch_first=True),
             num_layers=4,
         )
 
