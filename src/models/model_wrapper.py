@@ -48,11 +48,22 @@ class ModelWrapper(nn.Module):
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone()
-        out = self.vjepa(
+        vjepa_out = self.vjepa(
             x=tokens,
             tokenize=False,
             T=T,
             H_patches=H_patches,
             W_patches=W_patches,
         )
+        vjepa_reducted = self.dim_reduction(vjepa_out)
+        vjepa_reducted = self.reduction_act(vjepa_reducted)
+
+        vjepa_stretched = self.time_strecher(vjepa_reducted)
+        vjepa_stretched = self.strecher_act(vjepa_stretched)
+
+        out = self.decoder(
+            tgt=vjepa_reducted,
+            memory=vjepa_stretched.flatten(2).permute(0, 2, 1),
+        )
+
         return out
