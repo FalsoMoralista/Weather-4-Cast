@@ -14,6 +14,7 @@ class ModelWrapper(nn.Module):
         dim_out=2048,
         num_heads=16,
         num_layers=4,
+        num_target_channels=16,
     ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
@@ -33,13 +34,15 @@ class ModelWrapper(nn.Module):
         self.reduction_act = nn.GELU()
         self.time_strecher = nn.Conv3d(
             4,
-            16,
+            num_target_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )  # B, 16, T*196, 2048
         self.strecher_act = nn.GELU()
-        self.decoder_query = nn.Parameter(torch.randn(16 * 14 * 14, dim_out))
+        self.decoder_query = nn.Parameter(
+            torch.randn(num_target_channels * 14 * 14, dim_out)
+        )
         self.decoder = nn.TransformerDecoder(
             nn.TransformerDecoderLayer(
                 d_model=dim_out,
