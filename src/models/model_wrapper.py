@@ -15,6 +15,8 @@ class ModelWrapper(nn.Module):
         num_heads=16,
         num_layers=4,
         num_target_channels=16,
+        vjepa_size_in=14,
+        vjepa_size_out=18,
     ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
@@ -41,7 +43,7 @@ class ModelWrapper(nn.Module):
         )  # B, 16, T*196, 2048
         self.strecher_act = nn.GELU()
         self.decoder_query = nn.Parameter(
-            torch.randn(num_target_channels * 14 * 14, dim_out)
+            torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
         )
         self.decoder = nn.TransformerDecoder(
             nn.TransformerDecoderLayer(
