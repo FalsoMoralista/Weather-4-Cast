@@ -17,6 +17,7 @@ class ModelWrapper(nn.Module):
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
+        last_linear_dimension=324,
     ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
@@ -53,6 +54,7 @@ class ModelWrapper(nn.Module):
             ),
             num_layers=num_layers,
         )
+        self.regressor = nn.Linear(dim_out, last_linear_dimension)
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (2, 4, 11, 252, 252)
@@ -80,9 +82,11 @@ class ModelWrapper(nn.Module):
         vjepa_stretched = self.time_strecher(vjepa_reducted)
         vjepa_stretched = self.strecher_act(vjepa_stretched)
 
-        out = self.decoder(
+        decoded = self.decoder(
             tgt=vjepa_reducted,
             memory=vjepa_stretched.flatten(2).permute(0, 2, 1),
         )
 
-        return out
+        regressed = self.regressor(decoded)
+
+        return regressed
