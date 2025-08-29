@@ -124,6 +124,7 @@ class ModelWrapper(nn.Module):
         out = regressed.view(
             B,
             self.num_target_channels,
+            1,
             self.vjepa_size_out * self.vjepa_size_in,
             self.vjepa_size_out * self.vjepa_size_in,
         )
