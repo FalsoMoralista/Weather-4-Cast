@@ -80,6 +80,7 @@ class ModelWrapper(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
+        print("Vjepa output shape:", vjepa_out.shape, " it should be (B, 784, 4096)")
         vjepa_reducted = self.dim_reduction(vjepa_out)
         print(
             "Vjepa output reducted shape:",
