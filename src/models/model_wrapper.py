@@ -48,9 +48,9 @@ class ModelWrapper(nn.Module):
             padding=1,
         )  # B, 16, T*196, 2048
         self.strecher_act = nn.GELU()
-        self.decoder_query = nn.Parameter(
-            torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
-        )
+        # self.decoder_query = nn.Parameter(
+        #     torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
+        # )
         self.second_patch_size = 2
         self.decoder = VisionTransformer(
             img_size=(vjepa_size_in, vjepa_size_in),
@@ -112,8 +112,8 @@ class ModelWrapper(nn.Module):
         )
         vjepa_stretched = self.strecher_act(vjepa_stretched)
 
-        query = self.decoder_query.unsqueeze(0).expand(B, -1, -1)
-        print("Query shape:", query.shape)
+        # query = self.decoder_query.unsqueeze(0).expand(B, -1, -1)
+        # print("Query shape:", query.shape)
         stretched = vjepa_stretched.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
