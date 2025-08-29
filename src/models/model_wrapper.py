@@ -56,7 +56,7 @@ class ModelWrapper(nn.Module):
         self.second_patch_size = 2
         self.decoder = VisionTransformer(
             img_size=(vjepa_size_in, vjepa_size_in),
-            patch_size=self.second_patch_size,
+            patch_size=16,
             in_chans=num_target_channels,  # 16
             embed_dim=dim_out // 2,  # 1024
             depth=num_layers,
@@ -67,6 +67,7 @@ class ModelWrapper(nn.Module):
             batch_first=True,
             use_rope=True,
             tubelet_size=1,
+            ignore_patches=True,
         )
         self.regressor = nn.Linear(dim_out, last_linear_dimension)
 
@@ -104,7 +105,7 @@ class ModelWrapper(nn.Module):
             self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )
-        print("vjepa reshaped:", vjepa_reducted.shape, "it should be (B, 4, 196, 2084)")
+        print("vjepa reshaped:", vjepa_reducted.shape, "it should be (B, 4, 196, 2048)")
 
         vjepa_stretched = self.time_strecher(vjepa_reducted)
         print(
@@ -135,8 +136,8 @@ class ModelWrapper(nn.Module):
             x=stretched,
             T=self.num_target_channels,
             tokenize=False,
-            H_patches=self.vjepa_size_in // self.second_patch_size,
-            W_patches=self.vjepa_size_in // self.second_patch_size,
+            H_patches=H_patches,
+            W_patches=W_patches,
         )
         print("Decoded shape:", decoded.shape, "it should be (B, 3136, 1024)")
 
