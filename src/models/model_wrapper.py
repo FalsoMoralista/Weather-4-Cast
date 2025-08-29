@@ -20,6 +20,20 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
+        self.dim_reduction = nn.Linear(4096, 2048)  # B, T*196, 2048
+        self.reduction_act = nn.GELU()
+        self.time_strecher = nn.Conv3d(
+            4,
+            16,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )  # B, 16, T*196, 2048
+        self.strecher_act = nn.GELU()
+        self.decoder = nn.TransformerDecoder(
+            nn.TransformerDecoderLayer(d_model=2048, nhead=16, batch_first=True),
+            num_layers=4,
+        )
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (2, 4, 11, 252, 252)
