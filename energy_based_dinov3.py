@@ -276,7 +276,19 @@ def main(args, resume_preempt=False):
 
     print('Dinov3 Model:', dinov3)
 
-    model = ModelWrapper(backbone=dinov3, vjepa=vjepa, patch_size=16).to(device)
+    model = ModelWrapper(
+        backbone=dinov3,
+        vjepa=vjepa,
+        patch_size=16,
+        dim_in=4096,
+        dim_out=2048,
+        num_heads=16,
+        num_layers=4,
+        num_target_channels=16,
+        vjepa_size_in=14,
+        vjepa_size_out=18,
+        last_linear_dimension=324,
+    ).to(device)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params/1.0e9} B")
 
