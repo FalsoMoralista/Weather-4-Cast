@@ -26,6 +26,10 @@ class ModelWrapper(nn.Module):
         self.vjepa = vjepa
         self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
+        self.num_target_channels = num_target_channels
+        self.vjepa_size_in = vjepa_size_in
+        self.vjepa_size_out = vjepa_size_out
+        self.dim_out = dim_out
 
         # DinoV3 SAT normalization config
         # https://huggingface.co/facebook/dinov3-vit7b16-pretrain-sat493m/resolve/main/preprocessor_config.json
@@ -82,11 +86,24 @@ class ModelWrapper(nn.Module):
         vjepa_stretched = self.time_strecher(vjepa_reducted)
         vjepa_stretched = self.strecher_act(vjepa_stretched)
 
+        query = self.decoder_query.unsqueeze(0).expand(B, -1, -1)
+        stretched = vjepa_stretched.view(
+            -1,
+            self.vjepa_size_in * self.vjepa_size_out * self.vjepa_size_out,
+            self.dim_out,
+        )
+
         decoded = self.decoder(
-            tgt=vjepa_reducted,
-            memory=vjepa_stretched.flatten(2).permute(0, 2, 1),
+            tgt=query,
+            memory=stretched,
         )
 
         regressed = self.regressor(decoded)
+        out = regressed.view(
+            B,
+            self.num_target_channels,
+            self.vjepa_size_out * self.vjepa_size_in,
+            self.vjepa_size_out * self.vjepa_size_in,
+        )
 
-        return regressed
+        return out
