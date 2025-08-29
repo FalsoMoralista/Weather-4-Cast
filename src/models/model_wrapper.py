@@ -51,9 +51,10 @@ class ModelWrapper(nn.Module):
         self.decoder_query = nn.Parameter(
             torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
         )
+        self.second_patch_size = 2
         self.decoder = VisionTransformer(
-            img_size=vjepa_size_out * patch_size,
-            patch_size=patch_size,
+            img_size=(vjepa_size_in, vjepa_size_in),
+            patch_size=self.second_patch_size,
             in_chans=num_target_channels,  # 16
             embed_dim=dim_out // 2,  # 1024
             depth=num_layers,
@@ -121,10 +122,11 @@ class ModelWrapper(nn.Module):
         print("Stretched shape:", stretched.shape, " it should be (B, 16*196, 2048)")
 
         decoded = self.decoder(
-            tgt=query,
             x=stretched,
             T=self.num_target_channels,
             tokenize=False,
+            H_patches=self.vjepa_size_in // self.second_patch_size,
+            W_patches=self.vjepa_size_in // self.second_patch_size,
         )
         print("Decoded shape:", decoded.shape)
 
