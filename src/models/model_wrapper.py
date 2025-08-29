@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 import torchvision.transforms as T
+from src.models.vision_transformer import VisionTransformer
 
 
 class ModelWrapper(nn.Module):
@@ -50,13 +51,19 @@ class ModelWrapper(nn.Module):
         self.decoder_query = nn.Parameter(
             torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
         )
-        self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(
-                d_model=dim_out,
-                nhead=num_heads,
-                batch_first=True,
-            ),
-            num_layers=num_layers,
+        self.decoder = VisionTransformer(
+            img_size=vjepa_size_out * patch_size,
+            patch_size=patch_size,
+            in_chans=num_target_channels,  # 16
+            embed_dim=dim_out // 2,  # 1024
+            depth=num_layers,
+            num_heads=num_heads,
+            mlp_ratio=4,
+            qkv_bias=True,
+            norm_layer=nn.LayerNorm,
+            batch_first=True,
+            use_rope=True,
+            tubelet_size=1,
         )
         self.regressor = nn.Linear(dim_out, last_linear_dimension)
 
@@ -111,11 +118,13 @@ class ModelWrapper(nn.Module):
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )
-        print("Stretched shape:", stretched.shape)
+        print("Stretched shape:", stretched.shape, " it should be (B, 16*196, 2048)")
 
         decoded = self.decoder(
             tgt=query,
-            memory=stretched,
+            x=stretched,
+            T=self.num_target_channels,
+            tokenize=False,
         )
         print("Decoded shape:", decoded.shape)
 
