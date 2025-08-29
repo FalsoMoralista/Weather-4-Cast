@@ -12,6 +12,8 @@ class ModelWrapper(nn.Module):
         patch_size,
         dim_in=4096,
         dim_out=2048,
+        num_heads=16,
+        num_layers=4,
     ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
@@ -39,8 +41,12 @@ class ModelWrapper(nn.Module):
         self.strecher_act = nn.GELU()
         self.decoder_query = nn.Parameter(torch.randn(16 * 14 * 14, dim_out))
         self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(d_model=dim_out, nhead=16, batch_first=True),
-            num_layers=4,
+            nn.TransformerDecoderLayer(
+                d_model=dim_out,
+                nhead=num_heads,
+                batch_first=True,
+            ),
+            num_layers=num_layers,
         )
 
     def forward(self, x):
