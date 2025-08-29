@@ -255,7 +255,18 @@ def main(args, resume_preempt=False):
     print("Training dataset, length:", ipe * batch_size)
    
     
-    vjepa = VisionTransformer(img_size=(224,224), patch_size=16, mlp_ratio=4, num_frames=4, use_rope=True, embed_dim=4096, num_heads=32, depth=8, tubelet_size=1, ignore_patches=True)
+    vjepa = VisionTransformer(
+        img_size=(224, 224),
+        patch_size=16,
+        mlp_ratio=4,
+        num_frames=4,
+        use_rope=True,
+        embed_dim=4096,
+        num_heads=32,
+        depth=8,
+        tubelet_size=1,
+        ignore_patches=True,
+    )
     vjepa.patch_embed = nn.Identity()
     
     
@@ -282,7 +293,7 @@ def main(args, resume_preempt=False):
         patch_size=16,
         dim_in=4096,
         dim_out=2048,
-        num_heads=16,
+        num_heads=2,
         num_layers=4,
         num_target_channels=16,
         vjepa_size_in=14,
