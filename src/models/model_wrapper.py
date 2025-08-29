@@ -39,7 +39,7 @@ class ModelWrapper(nn.Module):
         )
         self.dim_reduction = nn.Linear(dim_in, dim_out)  # B, T*196, 2048
         self.reduction_act = nn.GELU()
-        self.time_strecher = nn.Conv3d(
+        self.time_strecher = nn.Conv2d(
             4,
             num_target_channels,
             kernel_size=3,
@@ -94,12 +94,13 @@ class ModelWrapper(nn.Module):
             self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )
+        print("vjepa reshaped:", vjepa_reducted.shape, "it should be (B, 4, 196, 2084)")
 
         vjepa_stretched = self.time_strecher(vjepa_reducted)
         print(
             "Vjepa output stretched shape:",
             vjepa_stretched.shape,
-            " it should be (B, 16, 784, 2048)",
+            " it should be (B, 16, 196, 2048)",
         )
         vjepa_stretched = self.strecher_act(vjepa_stretched)
 
@@ -107,7 +108,7 @@ class ModelWrapper(nn.Module):
         print("Query shape:", query.shape)
         stretched = vjepa_stretched.view(
             -1,
-            self.vjepa_size_in * self.vjepa_size_out * self.vjepa_size_out,
+            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )
         print("Stretched shape:", stretched.shape)
