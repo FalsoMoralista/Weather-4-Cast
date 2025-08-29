@@ -48,6 +48,8 @@ class ModelWrapper(nn.Module):
             padding=1,
         )  # B, 16, T*196, 2048
         self.strecher_act = nn.GELU()
+        self.second_dim_reduction = nn.Linear(dim_out, dim_out // 2)  # 1024
+        self.second_act = nn.GELU()
         # self.decoder_query = nn.Parameter(
         #     torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
         # )
@@ -112,14 +114,22 @@ class ModelWrapper(nn.Module):
         )
         vjepa_stretched = self.strecher_act(vjepa_stretched)
 
+        vjepa_stretched = self.second_dim_reduction(vjepa_stretched)
+        vjepa_stretched = self.second_act(vjepa_stretched)
+        print(
+            "Vjepa output second reducted shape:",
+            vjepa_stretched.shape,
+            "it should be (B, 16, 196, 1024)",
+        )
+
         # query = self.decoder_query.unsqueeze(0).expand(B, -1, -1)
         # print("Query shape:", query.shape)
         stretched = vjepa_stretched.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out,
+            self.dim_out // 2,
         )
-        print("Stretched shape:", stretched.shape, " it should be (B, 16*196, 2048)")
+        print("Stretched shape:", stretched.shape, " it should be (B, 3136, 1024)")
 
         decoded = self.decoder(
             x=stretched,
@@ -128,10 +138,10 @@ class ModelWrapper(nn.Module):
             H_patches=self.vjepa_size_in // self.second_patch_size,
             W_patches=self.vjepa_size_in // self.second_patch_size,
         )
-        print("Decoded shape:", decoded.shape)
+        print("Decoded shape:", decoded.shape, "it should be (B, 3136, 1024)")
 
         regressed = self.regressor(decoded)
-        print("Regressed shape:", regressed.shape)
+        print("Regressed shape:", regressed.shape, "it should be (B, 3136, 324)")
         out = regressed.view(
             B,
             self.num_target_channels,
@@ -139,6 +149,6 @@ class ModelWrapper(nn.Module):
             self.vjepa_size_out * self.vjepa_size_in,
             self.vjepa_size_out * self.vjepa_size_in,
         )
-        print("Final output shape:", out.shape)
+        print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
 
         return out
