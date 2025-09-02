@@ -28,6 +28,7 @@ class OperaCleaning:
 
     def print(self):
         threshold = 0
+        image_with_all_999 = 0
         num_of_errors = 0
         num_of_999 = 0
         for i in range(self.num_images):
@@ -35,6 +36,7 @@ class OperaCleaning:
                 num_of_999 = np.sum(self.data[i] == -9999000)
                 wrong_pixels = np.sum(self.data[i] < threshold)
                 if wrong_pixels == num_of_999:
+                    image_with_all_999 += 1
                     print("ATENTION:")
                     print("All wrong pixels are -9999000")
                     print("This timestep should be removed from the dataset")
@@ -53,6 +55,9 @@ class OperaCleaning:
                     num_of_errors += 1
         print(
             f"Total images with ALL values < {threshold}: {num_of_errors} out of {self.num_images}"
+        )
+        print(
+            f"Total images with ALL values -9999000: {image_with_all_999} out of {self.num_images}"
         )
 
 
