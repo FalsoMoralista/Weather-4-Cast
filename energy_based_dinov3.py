@@ -293,8 +293,8 @@ def main(args, resume_preempt=False):
         patch_size=16,
         dim_in=4096,
         dim_out=2048,
-        num_heads=2,
-        num_layers=4,
+        num_heads=16,
+        num_layers=1,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
@@ -402,7 +402,8 @@ def main(args, resume_preempt=False):
 
                 # Clear embedding tensors after loss computation
                 #del (projector_embeddings, positive_embeddings)
-                #torch.cuda.empty_cache()
+                del vjepa_embeddings
+                torch.cuda.empty_cache()
 
                 loss_meter.update(loss_val)
 
