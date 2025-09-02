@@ -27,10 +27,26 @@ class OperaCleaning:
         self.num_bands = self.shape[1]
 
     def print(self):
+        threshold = 0
+        num_of_errors = 0
         for i in range(self.num_images):
-            if np.any(self.data[i] < 0.2):
-                print(f"Image {i}:")
-                print(self.data[i])
+            if np.any(self.data[i] < threshold):
+                print("Type", type(self.data[i]))
+                image_shape = self.data[i].shape
+                print(
+                    f"Image {i} has shape {image_shape} and contains values < {threshold}"
+                )
+                wrong_pixels = np.sum(self.data[i] < threshold)
+                number_of_pixels = np.prod(image_shape)
+                print(f"Pixels with values < {threshold}: {wrong_pixels}")
+                print(
+                    f"Min value: {np.min(self.data[i])}, Max value: {np.max(self.data[i])}"
+                )
+                if wrong_pixels == number_of_pixels:
+                    num_of_errors += 1
+        print(
+            f"Total images with ALL values < {threshold}: {num_of_errors} out of {self.num_images}"
+        )
 
 
 if __name__ == "__main__":
