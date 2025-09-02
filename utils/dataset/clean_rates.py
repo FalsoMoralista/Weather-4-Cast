@@ -50,7 +50,6 @@ class OperaCleaning:
                 print(
                     f"Min value: {np.min(self.data[i])}, Max value: {np.max(self.data[i])}"
                 )
-                print(f"Pixels with value -9999000: {num_of_999}")
                 if wrong_pixels == number_of_pixels:
                     num_of_errors += 1
         print(
