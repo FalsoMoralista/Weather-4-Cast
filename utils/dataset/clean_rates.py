@@ -34,6 +34,8 @@ class OperaCleaning:
             if np.any(self.data[i] < threshold):
                 num_of_999 = np.sum(self.data[i] == -9999000)
                 wrong_pixels = np.sum(self.data[i] < threshold)
+                if wrong_pixels == 0:
+                    continue
                 if wrong_pixels == num_of_999:
                     image_with_all_999 += 1
                     print("ATENTION:")
@@ -45,6 +47,8 @@ class OperaCleaning:
                     f"Image {i} has shape {image_shape} and contains values < {threshold}"
                 )
                 print(f"Pixels with values < {threshold}: {wrong_pixels}")
+                # self.data[i][self.data[i] < threshold] = 0 # Uncomment to correct the data
+                print(f"Corrected {wrong_pixels} pixels to 0")
         print(
             f"Total images with ALL values -9999000: {image_with_all_999} out of {self.num_images}"
         )
