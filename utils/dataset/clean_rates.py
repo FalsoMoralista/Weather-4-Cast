@@ -29,23 +29,25 @@ class OperaCleaning:
     def print(self):
         threshold = 0
         num_of_errors = 0
-        num_of_888 = 0
         num_of_999 = 0
         for i in range(self.num_images):
             if np.any(self.data[i] < threshold):
+                num_of_999 = np.sum(self.data[i] == -9999000)
+                wrong_pixels = np.sum(self.data[i] < threshold)
+                if wrong_pixels == num_of_999:
+                    print("ATENTION:")
+                    print("All wrong pixels are -9999000")
+                    print("This timestep should be removed from the dataset")
+                    continue
                 image_shape = self.data[i].shape
                 print(
                     f"Image {i} has shape {image_shape} and contains values < {threshold}"
                 )
-                num_of_888 = np.sum(self.data[i] == -8888000)
-                num_of_999 = np.sum(self.data[i] == -9999000)
-                wrong_pixels = np.sum(self.data[i] < threshold)
                 number_of_pixels = np.prod(image_shape)
                 print(f"Pixels with values < {threshold}: {wrong_pixels}")
                 print(
                     f"Min value: {np.min(self.data[i])}, Max value: {np.max(self.data[i])}"
                 )
-                print(f"Pixels with value -8888000: {num_of_888}")
                 print(f"Pixels with value -9999000: {num_of_999}")
                 if wrong_pixels == number_of_pixels:
                     num_of_errors += 1
