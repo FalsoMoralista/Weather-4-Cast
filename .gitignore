@@ -7,3 +7,4 @@ gifs/
 __pycache__/
 *.py[cod]
 .venv
+slurm*
