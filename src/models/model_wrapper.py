@@ -55,7 +55,7 @@ class ModelWrapper(nn.Module):
         # )
         self.second_patch_size = 2
         self.decoder = VisionTransformer(
-            img_size=(vjepa_size_in, vjepa_size_in),
+            img_size=(224, 224),
             patch_size=16,
             in_chans=num_target_channels,  # 16
             embed_dim=dim_out // 2,  # 1024
@@ -69,7 +69,7 @@ class ModelWrapper(nn.Module):
             tubelet_size=1,
             ignore_patches=True,
         )
-        self.regressor = nn.Linear(dim_out, last_linear_dimension)
+        self.regressor = nn.Linear(dim_out // 2, last_linear_dimension)
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (2, 4, 11, 252, 252)
