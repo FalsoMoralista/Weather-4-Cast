@@ -5,6 +5,7 @@ import torch
 import h5py
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 
 class OperaCleaning:
@@ -26,9 +27,10 @@ class OperaCleaning:
         self.num_bands = self.shape[1]
 
     def print(self):
-        for i in self.num_images:
-            print(f"Image {i}:")
-            print(self.data[i])
+        for i in range(self.num_images):
+            if np.any(self.data[i] < 0.2):
+                print(f"Image {i}:")
+                print(self.data[i])
 
 
 if __name__ == "__main__":
