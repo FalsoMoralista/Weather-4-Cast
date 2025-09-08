@@ -25,7 +25,6 @@ class OperaCleaning:
             )
             for i in range(num_images):
                 data[i][data[i] < 0] = 0
-            hf[self.KEY] = data
 
     def clean(self):
         for file in self.files:
