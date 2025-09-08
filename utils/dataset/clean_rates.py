@@ -1,54 +1,31 @@
-import os
 import sys
+from pathlib import Path
 
 import h5py
-import numpy as np
 
 
 class OperaCleaning:
     KEY = "rates.crop"
 
     def __init__(self, path: str):
-        if not os.path.exists(path):
-            raise FileNotFoundError(f"The file {path} does not exist.")
-        self.file_path = path
+        self.base_path = path
         self._initialize()
 
     def _initialize(self):
-        f = h5py.File(self.file_path, "r")
-        self.data = f[self.KEY]
-        self.shape = self.data.shape
-        print(f"Keys in the file: {list(f.keys())}")
-        print("Data shape:", self.shape)
-        self.num_images = self.shape[0]
-        self.num_bands = self.shape[1]
+        self.files = Path(self.base_path).rglob(f"*{self.KEY}*")
 
-    def print(self):
-        threshold = 0
-        image_with_all_999 = 0
-        num_of_999 = 0
-        for i in range(self.num_images):
-            if np.any(self.data[i] < threshold):
-                num_of_999 = np.sum(self.data[i] == -9999000)
-                wrong_pixels = np.sum(self.data[i] < threshold)
-                if wrong_pixels == 0:
-                    continue
-                if wrong_pixels == num_of_999:
-                    image_with_all_999 += 1
-                    print("ATENTION:")
-                    print("All wrong pixels are -9999000")
-                    print("This timestep should be removed from the dataset")
-                    continue
-                image_shape = self.data[i].shape
-                print(
-                    f"Image {i} has shape {image_shape} and contains values < {threshold}"
-                )
-                print(f"Pixels with values < {threshold}: {wrong_pixels}")
-                # self.data[i][self.data[i] < threshold] = 0 # Uncomment to correct the data
-                print(f"Corrected {wrong_pixels} pixels to 0")
-        print(
-            f"Total images with ALL values -9999000: {image_with_all_999} out of {self.num_images}"
-        )
+    def clean_file(self, path: str):
+        with h5py.File(path, "r+") as hf:
+            data = hf[self.KEY]
+            num_images = data.shape[0]
+            for i in range(num_images):
+                data[i][data[i] < 0] = 0
+            hf[self.KEY][:] = data
+
+    def clean(self):
+        for file in self.files:
+            print(f"Processing file: {file}")
+            self.clean_file(file.absolute())
 
 
 if __name__ == "__main__":
