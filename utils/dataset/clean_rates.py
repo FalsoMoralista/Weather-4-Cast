@@ -15,7 +15,7 @@ class OperaCleaning:
         self.files = Path(self.base_path).rglob(f"*{self.KEY}*")
 
     def clean_file(self, path: str):
-        with h5py.File(path, "r") as hf:
+        with h5py.File(path, "r+") as hf:
             data = hf[self.KEY]
             num_images = data.shape[0]
             num_bands = data.shape[1]
@@ -23,10 +23,8 @@ class OperaCleaning:
                 f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}"
             )
             for i in range(num_images):
-                d = data[i]
-                print(d.shape)
-                # data[i][data[i] < 0] = 0
-            # hf[self.KEY][:] = data
+                data[i][data[i] < 0] = 0
+            hf[self.KEY] = data
 
     def clean(self):
         for file in self.files:
