@@ -19,8 +19,9 @@ class OperaCleaning:
             data = hf[self.KEY]
             num_images = data.shape[0]
             for i in range(num_images):
-                data[i][data[i] < 0] = 0
-            hf[self.KEY][:] = data
+                pass
+                # data[i][data[i] < 0] = 0
+            # hf[self.KEY][:] = data
 
     def clean(self):
         for file in self.files:
