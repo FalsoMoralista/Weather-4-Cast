@@ -22,7 +22,7 @@ def backup_opera_files():
             os.makedirs(backup_file_path.parent, exist_ok=True)
 
         try:
-            shutil.copy(file, backup_file_path)
+            # shutil.copy(file, backup_file_path)
             print(f"Copied {file} to {backup_file_path}")
         except Exception as e:
             print(f"Error copying {file} to {backup_file_path}: {e}")
