@@ -24,7 +24,9 @@ class OperaCleaning:
                 f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}"
             )
             for i in range(num_images):
-                data[i][data[i] < 0] = 0
+                arr = data[i][:]
+                arr[arr < 0] = 0
+                data[i] = arr
 
     def clean(self):
         for file in self.files:
