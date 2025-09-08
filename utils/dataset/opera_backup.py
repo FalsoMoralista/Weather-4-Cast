@@ -11,7 +11,6 @@ def backup_opera_files():
     files = Path(base_path).rglob(
         f"*{suffix}*", case_sensitive=False, recurse_symlinks=True
     )
-    print(f"Found {len(list(files))} files to back up.")
     for file in files:
         print(f"Processing file: {file}")
         relative_path = file.relative_to(base_path)
@@ -22,7 +21,7 @@ def backup_opera_files():
             os.makedirs(backup_file_path.parent, exist_ok=True)
 
         try:
-            # shutil.copy(file, backup_file_path)
+            shutil.copy(file, backup_file_path)
             print(f"Copied {file} to {backup_file_path}")
         except Exception as e:
             print(f"Error copying {file} to {backup_file_path}: {e}")
