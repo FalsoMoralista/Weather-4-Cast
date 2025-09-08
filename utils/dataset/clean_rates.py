@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import h5py
+import numpy as np
 
 
 class OperaCleaning:
@@ -29,7 +30,17 @@ class OperaCleaning:
     def clean(self):
         for file in self.files:
             print(f"Processing file: {file}")
-            self.clean_file(file.absolute())
+            path = file.absolute()
+            self.clean_file(path)
+            self.print(path)
+
+    def print(self, path: str):
+        with h5py.File(path, "r") as hf:
+            data = hf[self.KEY]
+            num_images = data.shape[0]
+            for i in range(num_images):
+                if np.any(data[i] < 0):
+                    print(f"File: {path} - Still have negative values")
 
 
 if __name__ == "__main__":
