@@ -36,27 +36,23 @@ from torch.nn.parallel import DistributedDataParallel
 from src.masks.multiblock import MaskCollator as MBMaskCollator
 from src.masks.utils import apply_masks
 from src.utils.distributed import init_distributed, AllReduce
-from src.utils.logging import CSVLogger, gpu_timer, AverageMeter#, grad_logger
+from src.utils.logging import CSVLogger, gpu_timer, AverageMeter  # , grad_logger
 
 from functools import partial
 
 from src.datasets.SatDataset import make_sat_dataset
 
-from src.helper import (
-    load_DC_checkpoint,
-    init_model,
-    init_vjepa_opt
-)
+from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
 
 from src.models.vision_transformer import VisionTransformer
 
-#from src.transforms import make_transforms
+# from src.transforms import make_transforms
 import time
 
 # --BROUGHT fRoM MAE
-#from timm.data.mixup import Mixup
-#from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
-#from timm.utils import accuracy
+# from timm.data.mixup import Mixup
+# from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
+# from timm.utils import accuracy
 
 from sklearn.metrics import accuracy_score
 
@@ -86,7 +82,6 @@ logger = logging.getLogger()
 
 
 def main(args, resume_preempt=False):
-
     # ----------------------------------------------------------------------- #
     #  PASSED IN PARAMS FROM CONFIG FILE
     # ----------------------------------------------------------------------- #
@@ -194,9 +189,7 @@ def main(args, resume_preempt=False):
     load_path = None
 
     if load_model:
-        load_path = (
-            "/home/lucianodourado/dinov3-weights/dinov3_vit7b16_pretrain_sat493m-a6675841.pth"
-        )
+        load_path = "/home/lucianodourado/dinov3-weights/dinov3_vit7b16_pretrain_sat493m-a6675841.pth"
 
     # -- make csv_logger
     csv_logger = CSVLogger(
@@ -219,7 +212,6 @@ def main(args, resume_preempt=False):
         ("%d", "time (ms)"),
     )
 
-
     # -- init data-loaders/samplers
     train_dataset, supervised_loader_train, supervised_sampler_train = make_sat_dataset(
         transform=None,
@@ -237,24 +229,23 @@ def main(args, resume_preempt=False):
     )
 
     val_dataset, supervised_loader_val, supervised_sampler_val = make_sat_dataset(
-            transform=None,
-            batch_size=batch_size, # TODO: double it up
-            collator= None,
-            pin_mem=True,
-            training=False,
-            num_workers=num_workers,
-            world_size=world_size,
-            rank=rank,
-            root_path=root_path,
-            image_folder=image_folder,
-            copy_data=copy_data,
-            drop_last=False)
-
+        transform=None,
+        batch_size=batch_size,  # TODO: double it up
+        collator=None,
+        pin_mem=True,
+        training=False,
+        num_workers=num_workers,
+        world_size=world_size,
+        rank=rank,
+        root_path=root_path,
+        image_folder=image_folder,
+        copy_data=copy_data,
+        drop_last=False,
+    )
 
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
-   
-    
+
     vjepa = VisionTransformer(
         img_size=(224, 224),
         patch_size=16,
@@ -268,24 +259,20 @@ def main(args, resume_preempt=False):
         ignore_patches=True,
     )
     vjepa.patch_embed = nn.Identity()
-    
-    
+
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
-    print(f"V-jepa Total parameters: {total_params/1.0e9} B")
-    
+    print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
+
     dinov3 = torch.hub.load(
-        '../dinov3',
-        'dinov3_vit7b16',
-        source='local',
-        weights=load_path
+        "../dinov3", "dinov3_vit7b16", source="local", weights=load_path
     ).to(device, dtype=torch.bfloat16)
 
-    dinov3 = torch.compile(dinov3, mode="reduce-overhead")    
-    
-    #for p in dinov3.parameters():
+    dinov3 = torch.compile(dinov3, mode="reduce-overhead")
+
+    # for p in dinov3.parameters():
     #    p.requires_grad = False
 
-    print('Dinov3 Model:', dinov3)
+    print("Dinov3 Model:", dinov3)
 
     model = ModelWrapper(
         backbone=dinov3,
@@ -301,17 +288,16 @@ def main(args, resume_preempt=False):
         last_linear_dimension=324,
     ).to(device)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Model Total parameters: {total_params/1.0e9} B")
+    print(f"Model Total parameters: {total_params / 1.0e9} B")
 
     allocated_bytes = torch.cuda.memory_allocated()
     allocated_gb = allocated_bytes / (1024**3)
-    print('allocated mem from model setup:', allocated_gb)
+    print("allocated mem from model setup:", allocated_gb)
 
-
-        # -- init optimizer and scheduler
+    # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_vjepa_opt(
         encoder=vjepa,
-        wd=wd, # TODO
+        wd=wd,  # TODO
         final_wd=final_wd,
         start_lr=start_lr,
         ref_lr=lr,
@@ -343,10 +329,8 @@ def main(args, resume_preempt=False):
             elif epoch + 1 == 1:
                 torch.save(save_dict, save_path.format(epoch=f"{epoch + 1}"))
 
-
     print("Batch Size:", batch_size)
     logger.info(model)
-
 
     # TODO: ADJUST THIS later!
     if resume_epoch != 0:
@@ -362,46 +346,45 @@ def main(args, resume_preempt=False):
             wd_scheduler.step()
 
     start_epoch = resume_epoch
-    
+
     # -- TRAINING LOOP
     total_test_loss_meter = AverageMeter()
     for epoch in range(start_epoch, num_epochs):
-        
-
         logger.info("Epoch %d" % (epoch + 1))
 
         total_loss_meter = AverageMeter()
         loss_meter = AverageMeter()
         time_meter = AverageMeter()
-        
-        supervised_sampler_train.set_epoch(epoch)         
-        
+
+        supervised_sampler_train.set_epoch(epoch)
+
         for itr, (image, label) in enumerate(supervised_loader_train):
-            
+
             def load_imgs():
                 img = image.to(device, non_blocking=True, dtype=torch.float32)
                 target = label.to(device, non_blocking=True, dtype=torch.float32)
                 return (img, target)
 
             def train_step():
+                x, y = load_imgs()
 
-                x, y  = load_imgs()   
+                print("X:", x.size())
+                print("y:", y.size())
 
-                print('X:', x.size())
-                print('y:', y.size())
-
-                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
+                with torch.amp.autocast(
+                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
+                ):
                     vjepa_embeddings = model(x)
 
                 allocated_bytes = torch.cuda.max_memory_allocated()
                 allocated_gb = allocated_bytes / (1024**3)
-                print('Max allocated mem from feature extract:', allocated_gb)
+                print("Max allocated mem from feature extract:", allocated_gb)
 
-                loss = F.smooth_l1_loss(vjepa_embeddings,y) 
+                loss = F.smooth_l1_loss(vjepa_embeddings, y)
                 loss_val = loss.item()
 
                 # Clear embedding tensors after loss computation
-                #del (projector_embeddings, positive_embeddings)
+                # del (projector_embeddings, positive_embeddings)
                 del vjepa_embeddings
                 torch.cuda.empty_cache()
 
@@ -423,22 +406,22 @@ def main(args, resume_preempt=False):
                     else:
                         _new_lr = scheduler.get_last_lr()[0]
                         _new_wd = wd_scheduler.get_last_value()
-                        
+
                 else:  # not used
                     loss.backward()
                     optimizer.step()
 
-                #grad_stats = grad_logger(model.module.named_parameters())
-                
+                # grad_stats = grad_logger(model.module.named_parameters())
+
                 if (itr + 1) % accum_iter == 0:
                     optimizer.zero_grad()
 
                 del loss
                 torch.cuda.empty_cache()
 
-                return (loss_val, _new_lr,_new_wd)
+                return (loss_val, _new_lr, _new_wd)
 
-            (loss, _new_lr, _new_wd), etime = (gpu_timer(train_step))
+            (loss, _new_lr, _new_wd), etime = gpu_timer(train_step)
 
             total_loss_meter.update(loss)
             time_meter.update(etime)
@@ -464,7 +447,7 @@ def main(args, resume_preempt=False):
                         )
                     )
 
-                    #if grad_stats is not None:
+                    # if grad_stats is not None:
                     #    logger.info(
                     #        "[%d, %d] grad_stats: [%.2e %.2e] (%.2e, %.2e)"
                     #        % (
@@ -476,26 +459,26 @@ def main(args, resume_preempt=False):
                     #            grad_stats.max,
                     #        )
                     #    )
-            log_stats()
 
+            log_stats()
 
         testAcc1 = AverageMeter()
         testAcc5 = AverageMeter()
         test_loss = AverageMeter()
-        
+
         # Warning: Enabling distributed evaluation with an eval dataset not divisible by process number
-        # will slightly alter validation results as extra duplicate entries are added to achieve equal 
+        # will slightly alter validation results as extra duplicate entries are added to achieve equal
         # num of samples per-process.
 
         @torch.no_grad()
         def evaluate():
             model.module.eval()
             # -- Enable shuffling to reduce monitor bias
-            supervised_sampler_val.set_epoch(epoch) 
+            supervised_sampler_val.set_epoch(epoch)
 
             test_mae = AverageMeter()
             MAE = nn.L1Loss()
-            
+
             for _, (samples, targets) in enumerate(supervised_loader_val):
                 images = samples.to(device, non_blocking=True)
                 labels = targets.to(device, non_blocking=True)
@@ -507,21 +490,21 @@ def main(args, resume_preempt=False):
                 mae = MAE(reconstructed_matrix, labels)
                 test_mae.update(mae)
 
-            total_test_loss_meter.update(test_mae)            
-            
+            total_test_loss_meter.update(test_mae)
 
             logger.info(f"Average accuracy over evaluation dataset: {test_mae.avg:.3f}")
-            logger.info("Mean Average error across epochs: %.3f" % total_test_loss_meter.avg)
-            
+            logger.info(
+                "Mean Average error across epochs: %.3f" % total_test_loss_meter.avg
+            )
+
         vtime = gpu_timer(evaluate)
-        
+
         model.module.train(True)
         model.module.backbone.eval()
         model.module.backbone.requires_grad_(False)
 
-
         params = sum(p.numel() for p in model.module.parameters() if p.requires_grad)
-        print(f"Model Total parameters: {params/1.0e9} == {total_params/1.0e9}? ")
+        print(f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? ")
 
         stats_logger.log(
             epoch + 1,
