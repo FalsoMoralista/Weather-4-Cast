@@ -251,6 +251,8 @@ def init_vjepa_opt(
         },
     ]
 
+    print("param_groups", param_groups)
+
     optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps)
     
     scheduler = WarmupCosineSchedule(
