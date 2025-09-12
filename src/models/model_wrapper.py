@@ -42,7 +42,7 @@ class ModelWrapper(nn.Module):
         )
         self.vision_decoder = nn.Sequential(
             OrderedDict(
-                [("dimension_reduction", nn.Linear(dim_in, dim_out))],
+                [("dimension_reduction", nn.Linear(dim_in, dim_out))],  # B, T*196, 2048
                 [("reduction_activation", nn.GELU())],
                 [
                     (
@@ -55,9 +55,11 @@ class ModelWrapper(nn.Module):
                             padding=1,
                         ),
                     )
-                ],
+                ],  # B, 16, T*196, 2048
                 [("strecher_activation", nn.GELU())],
-                [("second_dimension_reduction", nn.Linear(dim_out, dim_out // 2))],
+                [
+                    ("second_dimension_reduction", nn.Linear(dim_out, dim_out // 2))
+                ],  # 1024
                 [("second_reduction_activation", nn.GELU())],
                 [
                     (
@@ -82,34 +84,6 @@ class ModelWrapper(nn.Module):
                 [("regressor", nn.Linear(dim_out // 2, last_linear_dimension))],
             )
         )
-        self.dim_reduction = nn.Linear(dim_in, dim_out)  # B, T*196, 2048
-        self.reduction_act = nn.GELU()
-        self.time_strecher = nn.Conv2d(
-            4,
-            num_target_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-        )  # B, 16, T*196, 2048
-        self.strecher_act = nn.GELU()
-        self.second_dim_reduction = nn.Linear(dim_out, dim_out // 2)  # 1024
-        self.second_act = nn.GELU()
-        self.decoder = VisionTransformer(
-            img_size=(224, 224),
-            patch_size=16,
-            in_chans=num_target_channels,  # 16
-            embed_dim=dim_out // 2,  # 1024
-            depth=num_layers,
-            num_heads=num_heads,
-            mlp_ratio=4,
-            qkv_bias=True,
-            norm_layer=nn.LayerNorm,
-            batch_first=True,
-            use_rope=True,
-            tubelet_size=1,
-            ignore_patches=True,
-        )
-        self.regressor = nn.Linear(dim_out // 2, last_linear_dimension)
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (2, 4, 11, 252, 252)
@@ -131,57 +105,9 @@ class ModelWrapper(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        print("Vjepa output shape:", vjepa_out.shape, " it should be (B, 784, 4096)")
-        vjepa_reducted = self.dim_reduction(vjepa_out)
-        print(
-            "Vjepa output reducted shape:",
-            vjepa_reducted.shape,
-            "it should be (B, 784, 2048)",
-        )
-        vjepa_reducted = self.reduction_act(vjepa_reducted)
-        vjepa_reducted = vjepa_reducted.view(
-            B,
-            T,
-            self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out,
-        )
-        print("vjepa reshaped:", vjepa_reducted.shape, "it should be (B, 4, 196, 2048)")
 
-        vjepa_stretched = self.time_strecher(vjepa_reducted)
-        print(
-            "Vjepa output stretched shape:",
-            vjepa_stretched.shape,
-            " it should be (B, 16, 196, 2048)",
-        )
-        vjepa_stretched = self.strecher_act(vjepa_stretched)
+        regressed = self.vision_decoder(vjepa_out)  # B, 3136, 324
 
-        vjepa_stretched = self.second_dim_reduction(vjepa_stretched)
-        vjepa_stretched = self.second_act(vjepa_stretched)
-        print(
-            "Vjepa output second reducted shape:",
-            vjepa_stretched.shape,
-            "it should be (B, 16, 196, 1024)",
-        )
-
-        # query = self.decoder_query.unsqueeze(0).expand(B, -1, -1)
-        # print("Query shape:", query.shape)
-        stretched = vjepa_stretched.view(
-            -1,
-            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out // 2,
-        )
-        print("Stretched shape:", stretched.shape, " it should be (B, 3136, 1024)")
-
-        decoded = self.decoder(
-            x=stretched,
-            T=self.num_target_channels,
-            tokenize=False,
-            H_patches=H_patches,
-            W_patches=W_patches,
-        )
-        print("Decoded shape:", decoded.shape, "it should be (B, 3136, 1024)")
-
-        regressed = self.regressor(decoded)
         print("Regressed shape:", regressed.shape, "it should be (B, 3136, 324)")
         out = regressed.view(
             B,
