@@ -267,12 +267,12 @@ def main(args, resume_preempt=False):
         "../dinov3", "dinov3_vit7b16", source="local", weights=load_path
     ).to(device, dtype=torch.bfloat16)
 
-    dinov3 = torch.compile(dinov3, mode="reduce-overhead")
+    # dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
     # for p in dinov3.parameters():
     #    p.requires_grad = False
 
-    print("Dinov3 Model:", dinov3)
+    # print("Dinov3 Model:", dinov3)
 
     model = ModelWrapper(
         backbone=dinov3,
@@ -289,6 +289,9 @@ def main(args, resume_preempt=False):
         batch_size=batch_size,
         num_frames=4,
     ).to(device)
+
+    model = torch.compile(model, mode="reduce-overhead")
+
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params / 1.0e9} B")
 
