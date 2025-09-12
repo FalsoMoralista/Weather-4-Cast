@@ -46,6 +46,51 @@ class StretcherView(nn.Module):
         )
 
 
+class DecoderVisionTransformer(nn.Module):
+    def __init__(
+        self,
+        B,
+        T,
+        dim_out,
+        num_layers,
+        num_heads,
+        num_target_channels,
+        H_patches,
+        W_patches,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.B = B
+        self.T = T
+        self.H_patches = H_patches
+        self.W_patches = W_patches
+        self.vision_decoder = VisionTransformer(
+            img_size=(224, 224),
+            patch_size=16,
+            in_chans=num_target_channels,  # 16
+            embed_dim=dim_out // 2,  # 1024
+            depth=num_layers,
+            num_heads=num_heads,
+            mlp_ratio=4,
+            qkv_bias=True,
+            norm_layer=nn.LayerNorm,
+            batch_first=True,
+            use_rope=True,
+            tubelet_size=1,
+            ignore_patches=True,
+        )
+
+    def forward(self, x):
+        return self.vision_decoder(
+            x,
+            T=self.num_target_channels,
+            tokenize=False,
+            H_patches=self.H_patches,
+            W_patches=self.W_patches,
+        )
+
+
 class ModelWrapper(nn.Module):
     def __init__(
         self,
@@ -109,20 +154,15 @@ class ModelWrapper(nn.Module):
                     ("stretcher_view", stretcher_view),
                     (
                         "decoder",
-                        VisionTransformer(
-                            img_size=(224, 224),
-                            patch_size=16,
-                            in_chans=num_target_channels,  # 16
-                            embed_dim=dim_out // 2,  # 1024
-                            depth=num_layers,
-                            num_heads=num_heads,
-                            mlp_ratio=4,
-                            qkv_bias=True,
-                            norm_layer=nn.LayerNorm,
-                            batch_first=True,
-                            use_rope=True,
-                            tubelet_size=1,
-                            ignore_patches=True,
+                        DecoderVisionTransformer(
+                            2,
+                            4,
+                            dim_out,
+                            num_layers,
+                            num_heads,
+                            num_target_channels,
+                            252 // self.patch_size,
+                            252 // self.patch_size,
                         ),
                     ),
                     ("regressor", nn.Linear(dim_out // 2, last_linear_dimension)),
