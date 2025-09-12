@@ -296,7 +296,7 @@ def main(args, resume_preempt=False):
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_vjepa_opt(
-        encoder=vjepa,
+        encoder=model,
         wd=wd,  # TODO
         final_wd=final_wd,
         start_lr=start_lr,
