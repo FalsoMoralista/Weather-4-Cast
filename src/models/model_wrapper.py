@@ -7,6 +7,45 @@ import torchvision.transforms as T
 from src.models.vision_transformer import VisionTransformer
 
 
+class ReductionView(nn.Module):
+    def __init__(self, B, T, vjepa_size_in, dim_out, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.B = B
+        self.T = T
+        self.vjepa_size_in = vjepa_size_in
+        self.dim_out = dim_out
+
+    def forward(self, x):
+        return x.view(
+            self.B,
+            self.T,
+            self.vjepa_size_in * self.vjepa_size_in,
+            self.dim_out,
+        )
+
+
+class StretcherView(nn.Module):
+    def __init__(
+        self,
+        dim_out,
+        num_target_channels,
+        vjepa_size_in,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.dim_out = dim_out
+        self.num_target_channels = num_target_channels
+        self.vjepa_size_in = vjepa_size_in
+
+    def forward(self, x):
+        return x.view(
+            -1,
+            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
+            self.dim_out // 2,
+        )
+
+
 class ModelWrapper(nn.Module):
     def __init__(
         self,
@@ -40,10 +79,8 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
-        view_reduction = self.get_reduction_view()(2, 4, vjepa_size_in, dim_out)
-        stretcher_view = self.get_strecher_view()(
-            dim_out, num_target_channels, vjepa_size_in
-        )
+        view_reduction = ReductionView(2, 4, vjepa_size_in, dim_out)
+        stretcher_view = StretcherView(dim_out, num_target_channels, vjepa_size_in)
         self.vision_decoder = nn.Sequential(
             OrderedDict(
                 [
@@ -127,46 +164,3 @@ class ModelWrapper(nn.Module):
         print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
 
         return out
-
-    def get_reduction_view(self):
-        class ReductionView(nn.Module):
-            def __init__(self, B, T, vjepa_size_in, dim_out, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.B = B
-                self.T = T
-                self.vjepa_size_in = vjepa_size_in
-                self.dim_out = dim_out
-
-            def forward(self, x):
-                return x.view(
-                    self.B,
-                    self.T,
-                    self.vjepa_size_in * self.vjepa_size_in,
-                    self.dim_out,
-                )
-
-        return ReductionView
-
-    def get_strecher_view(self):
-        class StretcherView(nn.Module):
-            def __init__(
-                self,
-                dim_out,
-                num_target_channels,
-                vjepa_size_in,
-                *args,
-                **kwargs,
-            ):
-                super().__init__(*args, **kwargs)
-                self.dim_out = dim_out
-                self.num_target_channels = num_target_channels
-                self.vjepa_size_in = vjepa_size_in
-
-            def forward(self, x):
-                return x.view(
-                    -1,
-                    self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-                    self.dim_out // 2,
-                )
-
-        return StretcherView
