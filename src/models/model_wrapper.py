@@ -81,7 +81,6 @@ class DecoderVisionTransformer(nn.Module):
             tubelet_size=1,
             ignore_patches=True,
         )
-        self.vision_decoder = torch.compile(self.vision_decoder, mode="reduce-overhead")
 
     def forward(self, x):
         return self.vision_decoder(

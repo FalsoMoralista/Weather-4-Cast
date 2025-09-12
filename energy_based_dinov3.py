@@ -260,6 +260,7 @@ def main(args, resume_preempt=False):
     )
     vjepa.patch_embed = nn.Identity()
 
+    vjepa = vjepa.to(device)
     vjepa = torch.compile(vjepa, mode="reduce-overhead")
 
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
@@ -291,6 +292,8 @@ def main(args, resume_preempt=False):
         batch_size=batch_size,
         num_frames=4,
     ).to(device)
+
+    model.vision_decoder = torch.compile(model.vision_decoder, mode="reduce-overhead")
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params / 1.0e9} B")
