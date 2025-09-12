@@ -234,6 +234,8 @@ def init_vjepa_opt(
         encoder.vision_decoder.named_parameters()
     )
 
+    print("model_parameters", model_parameters)
+
     param_groups = [
         {
             "params": (
