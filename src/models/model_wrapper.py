@@ -105,6 +105,8 @@ class ModelWrapper(nn.Module):
         vjepa_size_in=14,
         vjepa_size_out=18,
         last_linear_dimension=324,
+        batch_size=2,
+        num_frames=4,
     ):
         super(ModelWrapper, self).__init__()
         self.backbone = backbone
@@ -124,7 +126,7 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
-        view_reduction = ReductionView(2, 4, vjepa_size_in, dim_out)
+        view_reduction = ReductionView(batch_size, num_frames, vjepa_size_in, dim_out)
         stretcher_view = StretcherView(dim_out, num_target_channels, vjepa_size_in)
         self.vision_decoder = nn.Sequential(
             OrderedDict(
@@ -155,8 +157,8 @@ class ModelWrapper(nn.Module):
                     (
                         "decoder",
                         DecoderVisionTransformer(
-                            2,
-                            4,
+                            batch_size,
+                            num_frames,
                             dim_out,
                             num_layers,
                             num_heads,
