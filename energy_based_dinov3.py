@@ -286,6 +286,8 @@ def main(args, resume_preempt=False):
         vjepa_size_in=14,
         vjepa_size_out=18,
         last_linear_dimension=324,
+        batch_size=batch_size,
+        num_frames=4,
     ).to(device)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params / 1.0e9} B")
