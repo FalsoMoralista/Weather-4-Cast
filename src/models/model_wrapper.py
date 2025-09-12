@@ -128,7 +128,7 @@ class ModelWrapper(nn.Module):
 
         return out
 
-    def get_reduction_view():
+    def get_reduction_view(self):
         class ReductionView(nn.Module):
             def __init__(self, B, T, vjepa_size_in, dim_out, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -147,7 +147,7 @@ class ModelWrapper(nn.Module):
 
         return ReductionView
 
-    def get_strecher_view():
+    def get_strecher_view(self):
         class StretcherView(nn.Module):
             def __init__(
                 self,
