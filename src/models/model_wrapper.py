@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 
@@ -37,6 +39,48 @@ class ModelWrapper(nn.Module):
         self.normalize = T.Normalize(
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
+        )
+        self.vision_decoder = nn.Sequential(
+            OrderedDict(
+                [("dimension_reduction", nn.Linear(dim_in, dim_out))],
+                [("reduction_activation", nn.GELU())],
+                [
+                    (
+                        "time_stretcher",
+                        nn.Conv2d(
+                            4,
+                            num_target_channels,
+                            kernel_size=3,
+                            stride=1,
+                            padding=1,
+                        ),
+                    )
+                ],
+                [("strecher_activation", nn.GELU())],
+                [("second_dimension_reduction", nn.Linear(dim_out, dim_out // 2))],
+                [("second_reduction_activation", nn.GELU())],
+                [
+                    (
+                        "decoder",
+                        VisionTransformer(
+                            img_size=(224, 224),
+                            patch_size=16,
+                            in_chans=num_target_channels,  # 16
+                            embed_dim=dim_out // 2,  # 1024
+                            depth=num_layers,
+                            num_heads=num_heads,
+                            mlp_ratio=4,
+                            qkv_bias=True,
+                            norm_layer=nn.LayerNorm,
+                            batch_first=True,
+                            use_rope=True,
+                            tubelet_size=1,
+                            ignore_patches=True,
+                        ),
+                    )
+                ],
+                [("regressor", nn.Linear(dim_out // 2, last_linear_dimension))],
+            )
         )
         self.dim_reduction = nn.Linear(dim_in, dim_out)  # B, T*196, 2048
         self.reduction_act = nn.GELU()
