@@ -235,6 +235,7 @@ def init_vjepa_opt(
             "params": (
                 p
                 for n, p in encoder.vjepa.named_parameters()
+                + encoder.vision_decoder.named_parameters()
                 if ("bias" not in n) and (len(p.shape) != 1)
             )
         },
@@ -242,6 +243,7 @@ def init_vjepa_opt(
             "params": (
                 p
                 for n, p in encoder.vjepa.named_parameters()
+                + encoder.vision_decoder.named_parameters()
                 if ("bias" in n) or (len(p.shape) == 1)
             ),
             "WD_exclude": zero_init_bias_wd,
