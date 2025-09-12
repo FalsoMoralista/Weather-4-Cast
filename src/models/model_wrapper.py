@@ -94,10 +94,6 @@ class ModelWrapper(nn.Module):
         self.strecher_act = nn.GELU()
         self.second_dim_reduction = nn.Linear(dim_out, dim_out // 2)  # 1024
         self.second_act = nn.GELU()
-        # self.decoder_query = nn.Parameter(
-        #     torch.randn(num_target_channels * vjepa_size_in * vjepa_size_in, dim_out)
-        # )
-        self.second_patch_size = 2
         self.decoder = VisionTransformer(
             img_size=(224, 224),
             patch_size=16,
