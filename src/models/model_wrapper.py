@@ -40,6 +40,10 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
+        view_reduction = self.get_reduction_view()(2, 4, vjepa_size_in, dim_out)
+        stretcher_view = self.get_strecher_view()(
+            dim_out, num_target_channels, vjepa_size_in
+        )
         self.vision_decoder = nn.Sequential(
             OrderedDict(
                 [
@@ -48,6 +52,7 @@ class ModelWrapper(nn.Module):
                         nn.Linear(dim_in, dim_out),
                     ),  # B, T*196, 2048
                     ("reduction_activation", nn.GELU()),
+                    ("reduction_view", view_reduction),
                     (
                         "time_stretcher",
                         nn.Conv2d(
@@ -64,6 +69,7 @@ class ModelWrapper(nn.Module):
                         nn.Linear(dim_out, dim_out // 2),
                     ),  # 1024
                     ("second_reduction_activation", nn.GELU()),
+                    ("stretcher_view", stretcher_view),
                     (
                         "decoder",
                         VisionTransformer(
@@ -121,3 +127,46 @@ class ModelWrapper(nn.Module):
         print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
 
         return out
+
+    def get_reduction_view():
+        class ReductionView(nn.Module):
+            def __init__(self, B, T, vjepa_size_in, dim_out, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.B = B
+                self.T = T
+                self.vjepa_size_in = vjepa_size_in
+                self.dim_out = dim_out
+
+            def forward(self, x):
+                return x.view(
+                    self.B,
+                    self.T,
+                    self.vjepa_size_in * self.vjepa_size_in,
+                    self.dim_out,
+                )
+
+        return ReductionView
+
+    def get_strecher_view():
+        class StretcherView(nn.Module):
+            def __init__(
+                self,
+                dim_out,
+                num_target_channels,
+                vjepa_size_in,
+                *args,
+                **kwargs,
+            ):
+                super().__init__(*args, **kwargs)
+                self.dim_out = dim_out
+                self.num_target_channels = num_target_channels
+                self.vjepa_size_in = vjepa_size_in
+
+            def forward(self, x):
+                return x.view(
+                    -1,
+                    self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
+                    self.dim_out // 2,
+                )
+
+        return StretcherView
