@@ -42,9 +42,12 @@ class ModelWrapper(nn.Module):
         )
         self.vision_decoder = nn.Sequential(
             OrderedDict(
-                [("dimension_reduction", nn.Linear(dim_in, dim_out))],  # B, T*196, 2048
-                [("reduction_activation", nn.GELU())],
                 [
+                    (
+                        "dimension_reduction",
+                        nn.Linear(dim_in, dim_out),
+                    ),  # B, T*196, 2048
+                    ("reduction_activation", nn.GELU()),
                     (
                         "time_stretcher",
                         nn.Conv2d(
@@ -54,14 +57,13 @@ class ModelWrapper(nn.Module):
                             stride=1,
                             padding=1,
                         ),
-                    )
-                ],  # B, 16, T*196, 2048
-                [("strecher_activation", nn.GELU())],
-                [
-                    ("second_dimension_reduction", nn.Linear(dim_out, dim_out // 2))
-                ],  # 1024
-                [("second_reduction_activation", nn.GELU())],
-                [
+                    ),  # B, 16, T*196, 2048
+                    ("strecher_activation", nn.GELU()),
+                    (
+                        "second_dimension_reduction",
+                        nn.Linear(dim_out, dim_out // 2),
+                    ),  # 1024
+                    ("second_reduction_activation", nn.GELU()),
                     (
                         "decoder",
                         VisionTransformer(
@@ -79,9 +81,9 @@ class ModelWrapper(nn.Module):
                             tubelet_size=1,
                             ignore_patches=True,
                         ),
-                    )
-                ],
-                [("regressor", nn.Linear(dim_out // 2, last_linear_dimension))],
+                    ),
+                    ("regressor", nn.Linear(dim_out // 2, last_linear_dimension)),
+                ]
             )
         )
 
