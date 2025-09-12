@@ -230,6 +230,25 @@ def init_vjepa_opt(
     #     }
     # ]
 
+    param_groups = [
+        {
+            "params": (
+                p
+                for n, p in encoder.vjepa.named_parameters()
+                if ("bias" not in n) and (len(p.shape) != 1)
+            )
+        },
+        {
+            "params": (
+                p
+                for n, p in encoder.vjepa.named_parameters()
+                if ("bias" in n) or (len(p.shape) == 1)
+            ),
+            "WD_exclude": zero_init_bias_wd,
+            "weight_decay": 0,
+        },
+    ]
+
     optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps)
     
     scheduler = WarmupCosineSchedule(
