@@ -65,6 +65,7 @@ class DecoderVisionTransformer(nn.Module):
         self.T = T
         self.H_patches = H_patches
         self.W_patches = W_patches
+        self.num_target_channels = num_target_channels
         self.vision_decoder = VisionTransformer(
             img_size=(224, 224),
             patch_size=16,
