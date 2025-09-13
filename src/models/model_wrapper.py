@@ -80,6 +80,7 @@ class DecoderVisionTransformer(nn.Module):
             use_rope=True,
             tubelet_size=1,
             ignore_patches=True,
+            use_activation_checkpointing=True
         )
 
     def forward(self, x):
