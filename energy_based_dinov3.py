@@ -381,18 +381,20 @@ def main(args, resume_preempt=False):
                     "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
                 ):
                     vjepa_embeddings = model(x)
+                    del x
 
                 allocated_bytes = torch.cuda.max_memory_allocated()
                 allocated_gb = allocated_bytes / (1024**3)
                 print("Max allocated mem from feature extract:", allocated_gb)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
+                del vjepa_embeddings
+                del y
+                torch.cuda.empty_cache()
                 loss_val = loss.item()
 
                 # Clear embedding tensors after loss computation
                 # del (projector_embeddings, positive_embeddings)
-                del vjepa_embeddings
-                torch.cuda.empty_cache()
 
                 loss_meter.update(loss_val)
 
@@ -400,6 +402,7 @@ def main(args, resume_preempt=False):
                     loss = loss / accum_iter
 
                 #  Step 2. Backward & step
+                torch.cuda.empty_cache()
                 if use_bfloat16:
                     scaler.scale(loss).backward()
                     update_grad = (itr + 1) % accum_iter == 0
