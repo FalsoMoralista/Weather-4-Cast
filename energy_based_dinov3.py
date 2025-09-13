@@ -257,6 +257,7 @@ def main(args, resume_preempt=False):
         depth=8,
         tubelet_size=1,
         ignore_patches=True,
+        use_activation_checkpointing=True
     )
     vjepa.patch_embed = nn.Identity()
 
