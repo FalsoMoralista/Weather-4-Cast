@@ -253,7 +253,7 @@ def main(args, resume_preempt=False):
         num_frames=4,
         use_rope=True,
         embed_dim=4096,
-        num_heads=32,
+        num_heads=24,
         depth=6,
         tubelet_size=1,
         ignore_patches=True,
@@ -430,6 +430,7 @@ def main(args, resume_preempt=False):
 
                 return (loss_val, _new_lr, _new_wd)
 
+            torch.cuda.empty_cache()
             (loss, _new_lr, _new_wd), etime = gpu_timer(train_step)
 
             total_loss_meter.update(loss)
