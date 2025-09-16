@@ -16,6 +16,12 @@ _GLOBAL_SEED = 0
 logger = getLogger()
 
 
+def worker_init_fn(worker_id):
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset
+    dataset._init_files()
+
+
 def make_sat_dataset(
     transform,
     batch_size,
@@ -40,13 +46,13 @@ def make_sat_dataset(
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
-        collate_fn=collator,
         sampler=dist_sampler,
         batch_size=batch_size,
         drop_last=drop_last,
         pin_memory=pin_mem,
         num_workers=num_workers,
         persistent_workers=False,
+        worker_init_fn=worker_init_fn,
     )
     logger.info("Sat Dataset dataloader created")
 
@@ -94,6 +100,16 @@ class SatDataset(Dataset):
     def _sort_files_by_name(self, files: list[Path]):
         return sorted(files, key=lambda x: str(x.absolute()))
 
+    def _init_files(self):
+        self.hrit_files = {
+            f: h5py.File(f, "r", swmr=True) for f in self.hrit_index.keys()
+        }
+        opera_names = [
+            (f, f.replace("HRIT", "OPERA").replace("reflbt0.ns", "rates.crop"))
+            for f in self.hrit_index.keys()
+        ]
+        self.opera_files = {f: h5py.File(o, "r", swmr=True) for f, o in opera_names}
+
     def _get_hrit_files_by_type(self, type: str):
         files = []
         if type == "train":
@@ -110,8 +126,13 @@ class SatDataset(Dataset):
         size = 0
         files = self._get_hrit_files_by_type(type)
         for f in files:
-            with h5py.File(f, "r") as file:
-                size += file[self.HRIT_KEY].shape[0]
+            with h5py.File(f, "r", swmr=True) as file:
+                size += (
+                    file[self.HRIT_KEY].shape[0]
+                    - self.OPERA_WINDOW_SIZE
+                    - self.HRIT_WINDOW_SIZE
+                    + 1
+                )
         return size
 
     def _get_hrit_train_size(self):
@@ -129,7 +150,7 @@ class SatDataset(Dataset):
             raise ValueError(f"Unknown dataset type: {self.type}")
 
     def _get_image_count(self, path: Path):
-        with h5py.File(path, "r") as file:
+        with h5py.File(path, "r", swmr=True) as file:
             return (
                 file[self.HRIT_KEY].shape[0]
                 - self.OPERA_WINDOW_SIZE
@@ -150,38 +171,90 @@ class SatDataset(Dataset):
     def __getitem__(self, idx):
         for file_name, (start, count) in self.hrit_index.items():
             if start <= idx < start + count:
-                with h5py.File(file_name, "r") as hrit:
-                    input_start = idx - start
-                    input_end = input_start + self.HRIT_WINDOW_SIZE
-                    input = hrit[self.HRIT_KEY][input_start:input_end]
-                opera_file_name = file_name.replace("HRIT", "OPERA").replace(
-                    "reflbt0.ns", "rates.crop"
+                hrit = self.hrit_files[file_name]
+                opera = self.opera_files[file_name]
+                input_start = idx - start
+                input_end = input_start + self.HRIT_WINDOW_SIZE
+                input = hrit[self.HRIT_KEY][input_start:input_end]
+                # with h5py.File(file_name, "r", swmr=True) as hrit:
+                #     input_start = idx - start
+                #     input_end = input_start + self.HRIT_WINDOW_SIZE
+                #     input = hrit[self.HRIT_KEY][input_start:input_end]
+                # opera_file_name = file_name.replace("HRIT", "OPERA").replace(
+                #     "reflbt0.ns", "rates.crop"
+                # )
+                target_start = idx + self.HRIT_WINDOW_SIZE - start
+                target_end = (
+                    idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
                 )
-                with h5py.File(opera_file_name, "r") as opera:
-                    target_start = idx + self.HRIT_WINDOW_SIZE - start
-                    target_end = (
-                        idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
-                    )
-                    target = opera[self.OPERA_KEY][target_start:target_end]
+                target = opera[self.OPERA_KEY][target_start:target_end]
+                # with h5py.File(opera_file_name, "r", swmr=True) as opera:
+                #     target_start = idx + self.HRIT_WINDOW_SIZE - start
+                #     target_end = (
+                #         idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
+                #     )
+                #     target = opera[self.OPERA_KEY][target_start:target_end]
                 if self.transform:
                     input = self.transform(input)
+                # import datetime
+
+                # start = datetime.datetime.now()
                 input = F.interpolate(
                     tensor(input),
                     size=self.input_size,
                     mode="bicubic",
                 )
-                return input, tensor(target)
+
+                # input = torch.nan_to_num(input, nan=0.0, posinf=0.0, neginf=0.0)
+                target = tensor(target)
+                # target = torch.nan_to_num(target, nan=0.0, posinf=0.0, neginf=0.0)
+
+                # end = datetime.datetime.now()
+                # delta = end - start
+                # logger.info(f"Processing time: {delta.total_seconds()} seconds")
+
+                # logger.info(f"File name:{file_name}, index: {idx}")
+                # logger.info(f"input: {input.size()}")
+                # logger.info(f"target: {target.size()}")
+                # logger.info(f"worker id: {torch.utils.data.get_worker_info()}")
+                return input, target
 
 
 if __name__ == "__main__":
-    dataset = SatDataset(SatDataset.ROOT)
+    training = True
+    world_size = 1
+    rank = 0
+    batch_size = 4
+    pin_mem = True
+    num_workers = 16
+    drop_last = False
 
-    print(f"Dataset length: {len(dataset)}")
+    dataset = SatDataset(SatDataset.ROOT, type="train" if training else "val")
 
-    loader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4)
+    print(f"Dataset length: {len(dataset)}", flush=True)
+
+    logger.info("Sat dataset created")
+
+    dist_sampler = torch.utils.data.distributed.DistributedSampler(
+        dataset=dataset, num_replicas=world_size, rank=rank
+    )
+
+    loader = torch.utils.data.DataLoader(
+        dataset,
+        sampler=dist_sampler,
+        batch_size=batch_size,
+        drop_last=drop_last,
+        pin_memory=pin_mem,
+        num_workers=num_workers,
+        persistent_workers=False,
+        worker_init_fn=worker_init_fn,
+    )
+
     print(f"Loader length: {len(loader)} - Batch size: {loader.batch_size}")
 
     for i, data in enumerate(loader):
         input, target = data
-        print(f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}")
-        break
+        logger.info(input.size(), target.size())
+        logger.info(
+            f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}"
+        )

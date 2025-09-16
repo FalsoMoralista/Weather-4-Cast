@@ -183,7 +183,6 @@ class ModelWrapper(nn.Module):
         with torch.inference_mode():
             features = self.backbone.forward_features(x)
         tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
-        print("Tokens:", tokens.size())
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone()
@@ -194,10 +193,11 @@ class ModelWrapper(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-
         regressed = self.vision_decoder(vjepa_out)  # B, 3136, 324
-
-        print("Regressed shape:", regressed.shape, "it should be (B, 3136, 324)")
+        del tokens
+        del vjepa_out
+        
+        #print("Regressed shape:", regressed.shape, "it should be (B, 3136, 324)")
         out = regressed.view(
             B,
             self.num_target_channels,
@@ -205,6 +205,6 @@ class ModelWrapper(nn.Module):
             self.vjepa_size_out * self.vjepa_size_in,
             self.vjepa_size_out * self.vjepa_size_in,
         )
-        print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
+        #print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
 
         return out

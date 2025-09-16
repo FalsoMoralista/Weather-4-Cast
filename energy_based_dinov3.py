@@ -15,6 +15,8 @@ try:
     # --          TO EACH PROCESS
     os.environ["CUDA_VISIBLE_DEVICES"] = os.environ["SLURM_LOCALID"]
     os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
+    # TODO: testing op below
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 except Exception:
     pass
@@ -123,7 +125,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 1  # batch_size = accum_iter * batch_size
+    accum_iter = 512  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -253,11 +255,11 @@ def main(args, resume_preempt=False):
         num_frames=4,
         use_rope=True,
         embed_dim=4096,
-        num_heads=24,
+        num_heads=32,
         depth=6,
         tubelet_size=1,
         ignore_patches=True,
-        use_activation_checkpointing=True
+        use_activation_checkpointing=True,
     )
     vjepa.patch_embed = nn.Identity()
 
@@ -373,9 +375,8 @@ def main(args, resume_preempt=False):
 
             def train_step():
                 x, y = load_imgs()
-
-                print("X:", x.size())
-                print("y:", y.size())
+                #x = torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+                #y = torch.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
 
                 with torch.amp.autocast(
                     "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
@@ -383,9 +384,9 @@ def main(args, resume_preempt=False):
                     vjepa_embeddings = model(x)
                     del x
 
-                allocated_bytes = torch.cuda.max_memory_allocated()
-                allocated_gb = allocated_bytes / (1024**3)
-                print("Max allocated mem from feature extract:", allocated_gb)
+                # allocated_bytes = torch.cuda.max_memory_allocated()
+                # allocated_gb = allocated_bytes / (1024**3)
+                # print("Max allocated mem from feature extract:", allocated_gb)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
                 del vjepa_embeddings
@@ -402,11 +403,12 @@ def main(args, resume_preempt=False):
                     loss = loss / accum_iter
 
                 #  Step 2. Backward & step
-                torch.cuda.empty_cache()
                 if use_bfloat16:
                     scaler.scale(loss).backward()
+                    torch.cuda.empty_cache()
                     update_grad = (itr + 1) % accum_iter == 0
                     if update_grad:
+                        scaler.unscale_(optimizer)
                         scaler.step(optimizer)
                         scaler.update()
                         _new_lr = scheduler.step()
@@ -424,9 +426,6 @@ def main(args, resume_preempt=False):
 
                 if (itr + 1) % accum_iter == 0:
                     optimizer.zero_grad()
-
-                del loss
-                torch.cuda.empty_cache()
 
                 return (loss_val, _new_lr, _new_wd)
 

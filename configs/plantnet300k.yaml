@@ -1,5 +1,5 @@
 data:
-  batch_size: 2
+  batch_size: 8
   color_jitter_strength: 0.0
   crop_scale:
   - 0.3
@@ -66,7 +66,7 @@ optimization:
   lr: 1.0e-03 #0.0007 # Default 0.0015 -> lr = base lr × batchsize / 256. (learning rate formula). /0.0007
   start_lr: 1.0e-06 #0.00001 # Default: 0.0002 
   warmup: 20
-  weight_decay: 0.05
+  weight_decay: 5.0e-2 # (default: e-2)
   label_smoothing: 0.1
 
 # mae lr: 0.0026. 6.5e-4 (blr)

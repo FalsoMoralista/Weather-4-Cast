@@ -48,6 +48,7 @@ class WarmupCosineSchedule(object):
         self.warmup_steps = warmup_steps
         self.T_max = T_max - warmup_steps
         self._step = 0.0
+        self.last_lr = start_lr  
 
     def step(self):
         self._step += 1
@@ -61,12 +62,15 @@ class WarmupCosineSchedule(object):
                 self.final_lr,
                 self.final_lr + (self.ref_lr - self.final_lr) * 0.5 * (1.0 + math.cos(math.pi * progress)),
             )
+        self.last_lr = new_lr  # <- Track the current L
 
         for group in self.optimizer.param_groups:
             group["lr"] = new_lr
 
         return new_lr
-
+    
+    def get_last_lr(self):
+        return [self.last_lr]
 
 class CosineWDSchedule(object):
 
@@ -76,6 +80,7 @@ class CosineWDSchedule(object):
         self.final_wd = final_wd
         self.T_max = T_max
         self._step = 0.0
+        self.last_wd = ref_wd         
 
     def step(self):
         self._step += 1
@@ -90,8 +95,12 @@ class CosineWDSchedule(object):
         for group in self.optimizer.param_groups:
             if ("WD_exclude" not in group) or not group["WD_exclude"]:
                 group["weight_decay"] = new_wd
+        
+        self.last_wd = new_wd          
         return new_wd
 
+    def get_last_value(self):
+        return self.last_wd  
 
 class LinearDecaySchedule(object):
 

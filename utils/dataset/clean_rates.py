@@ -21,18 +21,19 @@ class OperaCleaning:
             num_images = data.shape[0]
             num_bands = data.shape[1]
             print(
-                f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}"
+                f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}",
+                flush=True,
             )
             for i in range(num_images):
                 arr = data[i][:]
-                arr[arr < 0] = 0
+                arr[arr < 0 | np.isnan(arr) | np.isinf(arr)] = 0
                 data[i] = arr
 
     def clean(self):
         for file in self.files:
-            print(f"Processing file: {file}")
+            print(f"Processing file: {file}", flush=True)
             path = file.absolute()
-            self.clean_file(path)
+            # self.clean_file(path)
             self.print(path)
 
     def print(self, path: str):
@@ -41,7 +42,14 @@ class OperaCleaning:
             num_images = data.shape[0]
             for i in range(num_images):
                 if np.any(data[i] < 0):
-                    print(f"File: {path} - Still have negative values")
+                    print(f"File: {path} - Still have negative values", flush=True)
+                    break
+                if np.any(np.isnan(data[i])):
+                    print(f"File: {path} - Still have NaN values", flush=True)
+                    break
+                if np.any(np.isinf(data[i])):
+                    print(f"File: {path} - Still have Inf values", flush=True)
+                    break
 
 
 if __name__ == "__main__":

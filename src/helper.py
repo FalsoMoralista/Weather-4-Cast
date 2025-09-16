@@ -234,7 +234,7 @@ def init_vjepa_opt(
         encoder.vision_decoder.named_parameters()
     )
 
-    print("model_parameters", model_parameters)
+    #print("model_parameters", model_parameters)
 
     param_groups = [
         {
@@ -253,9 +253,9 @@ def init_vjepa_opt(
         },
     ]
 
-    print("param_groups", param_groups)
+    #print("param_groups", param_groups)
 
-    optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps)
+    optimizer = torch.optim.AdamW(param_groups, betas=betas, eps=eps, foreach=False)
     
     scheduler = WarmupCosineSchedule(
         optimizer,
