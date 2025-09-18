@@ -3,6 +3,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import torch
 
 
 class OperaCleaning:
@@ -33,6 +34,7 @@ class OperaCleaning:
         for file in self.files:
             print(f"Processing file: {file}", flush=True)
             path = file.absolute()
+            self.clean_from_torch(path)
             # self.clean_file(path)
             self.print(path)
 
@@ -43,13 +45,27 @@ class OperaCleaning:
             for i in range(num_images):
                 if np.any(data[i] < 0):
                     print(f"File: {path} - Still have negative values", flush=True)
-                    break
                 if np.any(np.isnan(data[i])):
                     print(f"File: {path} - Still have NaN values", flush=True)
-                    break
                 if np.any(np.isinf(data[i])):
                     print(f"File: {path} - Still have Inf values", flush=True)
-                    break
+
+    def clean_from_torch(self, path: str):
+        device = "cuda:0"
+        batch_size = 128
+        with h5py.File(path, "r+") as hf:
+            data = hf[self.KEY]
+            num_images = data.shape[0]
+            num_bands = data.shape[1]
+            print(
+                f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}",
+                flush=True,
+            )
+            for start in range(0, num_images, batch_size):
+                end = min(start + batch_size, num_images)
+                arr = torch.tensor(data[start:end][:]).to(device)
+                arr = torch.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+                # data[start:end] = arr.to("cpu").numpy()
 
 
 if __name__ == "__main__":
