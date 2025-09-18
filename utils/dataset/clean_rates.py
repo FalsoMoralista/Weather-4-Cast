@@ -73,7 +73,7 @@ class OperaCleaning:
                 end = min(start + batch_size, num_images)
                 arr = torch.tensor(data[start:end][:]).to(device)
                 arr = torch.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
-                # data[start:end] = arr.to("cpu").numpy()
+                data[start:end] = arr.to("cpu").numpy()
 
 
 if __name__ == "__main__":
