@@ -60,7 +60,7 @@ class OperaCleaning:
 
     def clean_from_torch(self, path: str):
         device = "cuda:0"
-        batch_size = 128
+        batch_size = 4096
         with h5py.File(path, "r+") as hf:
             data = hf[self.KEY]
             num_images = data.shape[0]
