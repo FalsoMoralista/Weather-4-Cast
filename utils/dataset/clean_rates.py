@@ -45,10 +45,13 @@ class OperaCleaning:
             for i in range(num_images):
                 if np.any(data[i] < 0):
                     print(f"File: {path} - Still have negative values", flush=True)
+                    break
                 if np.any(np.isnan(data[i])):
                     print(f"File: {path} - Still have NaN values", flush=True)
+                    break
                 if np.any(np.isinf(data[i])):
                     print(f"File: {path} - Still have Inf values", flush=True)
+                    break
 
     def clean_from_torch(self, path: str):
         device = "cuda:0"
