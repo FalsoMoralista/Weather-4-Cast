@@ -1,4 +1,5 @@
 import sys
+import itertools
 from pathlib import Path
 
 import h5py
@@ -8,13 +9,17 @@ import torch
 
 class OperaCleaning:
     KEY = "rates.crop"
+    HRIT_KEY = "reflbt0.ns"
 
     def __init__(self, path: str):
         self.base_path = path
         self._initialize()
 
     def _initialize(self):
-        self.files = Path(self.base_path).rglob(f"*{self.KEY}*")
+        self.files = itertools.chain(
+            Path(self.base_path).rglob(f"*{self.KEY}*"),
+            Path(self.base_path).rglob(f"*{self.HRIT_KEY}*"),
+        )
 
     def clean_file(self, path: str):
         with h5py.File(path, "r+") as hf:
