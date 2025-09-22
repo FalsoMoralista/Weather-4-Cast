@@ -8,9 +8,8 @@ from src.models.vision_transformer import VisionTransformer
 
 
 class ReductionView(nn.Module):
-    def __init__(self, B, T, vjepa_size_in, dim_out, *args, **kwargs):
+    def __init__(self, T, vjepa_size_in, dim_out, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.B = B
         self.T = T
         self.vjepa_size_in = vjepa_size_in
         self.dim_out = dim_out
@@ -47,10 +46,88 @@ class StretcherView(nn.Module):
         )
 
 
+class VisionTransformerDecoder(nn.Module):
+    '''
+        Non auto-regressive pixel decoder.
+        
+        (TODO) [...]
+    '''
+    def __init__(
+        self,
+        T,
+        dim_out,
+        num_layers,
+        num_heads,
+        num_target_channels,
+        H_patches,
+        W_patches,
+        dim_in,
+        last_linear_dimension,
+        vjepa_size_in,
+        *args,
+        **kwargs,
+    ):    
+        super().__init__(*args, **kwargs)
+        self.T = T
+        self.H_patches = H_patches
+        self.W_patches = W_patches
+        self.num_target_channels = num_target_channels
+        self.patch_size = 16
+        self.vjepa_size_in = vjepa_size_in
+
+        self.dim_out = dim_out
+
+        self.act = nn.GELU()
+        
+        self.linear_1 = nn.Linear(dim_in, dim_out)
+        
+        self.time_expansion = nn.Conv2d(4,num_target_channels,kernel_size=3,stride=1,padding=1,)
+        
+        self.linear_2 = nn.Linear(dim_out, dim_out // 2)
+        
+        self.regression = nn.Linear(dim_out // 2, last_linear_dimension)
+
+        self.vit_decoder = VisionTransformer(
+            img_size=(224, 224),
+            patch_size=16,
+            in_chans=num_target_channels,  # 16
+            embed_dim=dim_out // 2,  # 1024
+            depth=num_layers,
+            num_heads=num_heads,
+            mlp_ratio=4,
+            qkv_bias=True,
+            norm_layer=nn.LayerNorm,
+            batch_first=True,
+            use_rope=True,
+            tubelet_size=1,
+            ignore_patches=True,
+            use_activation_checkpointing=True
+        )
+
+    def forward(self, x):
+        B, _, _ = x.shape
+        x = self.linear_1(x) # From  (B, 4*196, 4096) to (B, 4*196, 2048)
+        x = self.act(x)
+        x = x.view(B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out) # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
+        x = self.time_expansion(x) # From (B, 4, 196, 2048) into (B, 16, 196, 2048) i.e., time axis expansion
+        x = self.act(x)
+        x = self.linear_2(x) # From  (B, 16*196, 2048) to (B, 16*196, 1024) 
+        x = self.act(x)
+        x = x.view(-1, self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in, self.dim_out // 2) # From (B, 16, 196, 1024) to (B, 16*196, 1024)
+        x = self.vit_decoder(
+            x,
+            T=self.num_target_channels,
+            tokenize=False,
+            H_patches=self.H_patches,
+            W_patches=self.W_patches,
+        )
+        x = self.regression(x) 
+        return x
+
+
 class DecoderVisionTransformer(nn.Module):
     def __init__(
         self,
-        B,
         T,
         dim_out,
         num_layers,
@@ -62,7 +139,6 @@ class DecoderVisionTransformer(nn.Module):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.B = B
         self.T = T
         self.H_patches = H_patches
         self.W_patches = W_patches
@@ -103,7 +179,7 @@ class ModelWrapper(nn.Module):
         dim_in=4096,
         dim_out=2048,
         num_heads=16,
-        num_layers=4,
+        num_decoder_layers=4,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
@@ -123,61 +199,62 @@ class ModelWrapper(nn.Module):
         self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
 
+        self.vit_decoder = VisionTransformerDecoder(T=num_frames,
+                                                    dim_in=dim_in,
+                                                    vjepa_size_in=vjepa_size_in,
+                                                    dim_out=dim_out,
+                                                    num_layers=num_decoder_layers,
+                                                    num_heads=num_heads,
+                                                    H_patches=224 // patch_size,
+                                                    W_patches=224 // self.patch_size,
+                                                    num_target_channels=num_target_channels,
+                                                    last_linear_dimension=last_linear_dimension)
+
         # DinoV3 SAT normalization config
         # https://huggingface.co/facebook/dinov3-vit7b16-pretrain-sat493m/resolve/main/preprocessor_config.json
         self.normalize = T.Normalize(
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
-        view_reduction = ReductionView(batch_size, num_frames, vjepa_size_in, dim_out)
-        stretcher_view = StretcherView(dim_out, num_target_channels, vjepa_size_in)
-        self.vision_decoder = nn.Sequential(
-            OrderedDict(
-                [
-                    (
-                        "dimension_reduction",
-                        nn.Linear(dim_in, dim_out),
-                    ),  # B, T*196, 2048
-                    ("reduction_activation", nn.GELU()),
-                    ("reduction_view", view_reduction),
-                    (
-                        "time_stretcher",
-                        nn.Conv2d(
-                            4,
-                            num_target_channels,
-                            kernel_size=3,
-                            stride=1,
-                            padding=1,
-                        ),
-                    ),  # B, 16, T*196, 2048
-                    ("strecher_activation", nn.GELU()),
-                    (
-                        "second_dimension_reduction",
-                        nn.Linear(dim_out, dim_out // 2),
-                    ),  # 1024
-                    ("second_reduction_activation", nn.GELU()),
-                    ("stretcher_view", stretcher_view),
-                    (
-                        "decoder",
-                        DecoderVisionTransformer(
-                            batch_size,
-                            num_frames,
-                            dim_out,
-                            num_layers,
-                            num_heads,
-                            num_target_channels,
-                            224 // self.patch_size,
-                            224 // self.patch_size,
-                        ),
-                    ),
-                    ("regressor", nn.Linear(dim_out // 2, last_linear_dimension)),
-                ]
-            )
-        )
+        
+        #self.vision_decoder = nn.Sequential(
+        #    OrderedDict(
+        #        [
+        #            (
+        #                "linear_1", nn.Linear(dim_in, dim_out), # From  (B, 4*196, 4096) to (B, 4*196, 2048)
+        #            ),
+        #            ("act_1", nn.GELU()),
+        #            ("reduction_view", ReductionView(num_frames, vjepa_size_in, dim_out)),
+        #            (
+        #                "time_stretcher",
+        #                nn.Conv2d(4,num_target_channels,kernel_size=3,stride=1,padding=1,), # From (B, 4, 196, 2048) into (B, 16, 196, 2048) i.e., time axis expansion
+        #            ), 
+        #            ("act_2", nn.GELU()),
+        #            (
+        #                "linear_2", nn.Linear(dim_out, dim_out // 2), # From  (B, 16*196, 2048) to (B, 16*196, 1024)
+        #            ), 
+        #            ("act_3", nn.GELU()),
+        #            ("stretcher_view", StretcherView(dim_out, num_target_channels, vjepa_size_in)),
+        #            (
+        #                "decoder",
+        #                DecoderVisionTransformer(
+        #                    num_frames,
+        #                    dim_out,
+        #                    num_decoder_layers,
+        #                    num_heads,
+        #                    num_target_channels,
+        #                    224 // self.patch_size,
+        #                    224 // self.patch_size,
+        #                ),
+        #            ),
+        #            ("output_regression", nn.Linear(dim_out // 2, last_linear_dimension)),
+        #        ]
+        #    )
+        #)
 
     def forward(self, x):
-        B, T, C, H, W = x.shape  # (2, 4, 11, 252, 252)
-        x = x.view(B * T, C, H, W)  # [8, 11, 252, 252]
+        B, T, C, H, W = x.shape  # (B, T=4, 11, 252, 252)
+        x = x.view(B * T, C, H, W)  # [B * T, 11, 252, 252]
         x = self.downsample(x)
         x = self.normalize(x)
 
@@ -186,7 +263,7 @@ class ModelWrapper(nn.Module):
         tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
-        tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone()
+        tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone() # Inference mode tensors requires cloning for grad mode reutilisation
         vjepa_out = self.vjepa(
             x=tokens,
             tokenize=False,
@@ -194,7 +271,7 @@ class ModelWrapper(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        regressed = self.vision_decoder(vjepa_out)  # B, 3136, 324
+        regressed = self.vit_decoder(vjepa_out)  # B, 3136, 324
         
         out = regressed.view(
             B,

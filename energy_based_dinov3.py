@@ -70,8 +70,8 @@ import random
 
 # --
 log_timings = True
-log_freq = 128
-checkpoint_freq = 5
+log_freq = 256
+checkpoint_freq = 1
 # --
 
 _GLOBAL_SEED = 0
@@ -286,7 +286,7 @@ def main(args, resume_preempt=False):
         dim_in=4096,
         dim_out=2048,
         num_heads=16,
-        num_layers=1,
+        num_decoder_layers=2,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
@@ -320,8 +320,14 @@ def main(args, resume_preempt=False):
     #model = DistributedDataParallel(model, static_graph=True)
 
     def save_checkpoint(epoch):
+
+        model_state_dict = {
+            k: v for k, v in model.state_dict().items()
+            if not k.startswith("backbone") # Remove pre-trained backbone from checkpoint
+        } 
+
         save_dict = {
-            "model": model.state_dict(),
+            "model": model_state_dict,
             "opt": optimizer.state_dict(),
             "scaler": None if scaler is None else scaler.state_dict(),
             "epoch": epoch,
@@ -474,11 +480,10 @@ def main(args, resume_preempt=False):
             supervised_sampler_val.set_epoch(epoch)
 
             test_mae = AverageMeter()
-            MAE = nn.L1Loss()
 
             for _, (samples, targets) in enumerate(supervised_loader_val):
-                images = samples.to(device, non_blocking=True)
-                labels = targets.to(device, non_blocking=True)
+                images = samples.to(device, non_blocking=True, dtype=torch.float32)
+                labels = targets.to(device, non_blocking=True, dtype=torch.float32)
 
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
                     with torch.inference_mode():

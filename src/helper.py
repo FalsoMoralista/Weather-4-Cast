@@ -231,7 +231,7 @@ def init_vjepa_opt(
     # ]
 
     model_parameters = list(encoder.vjepa.named_parameters()) + list(
-        encoder.vision_decoder.named_parameters()
+        encoder.vit_decoder.named_parameters()
     )
 
     #print("model_parameters", model_parameters)
