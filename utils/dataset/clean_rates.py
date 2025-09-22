@@ -17,7 +17,7 @@ class OperaCleaning:
 
     def _initialize(self):
         self.files = itertools.chain(
-            Path(self.base_path).rglob(f"*{self.KEY}*"),
+            #Path(self.base_path).rglob(f"*{self.KEY}*"),
             Path(self.base_path).rglob(f"*{self.HRIT_KEY}*"),
         )
 
@@ -41,7 +41,7 @@ class OperaCleaning:
             path = file.absolute()
             self.clean_from_torch(path)
             # self.clean_file(path)
-            self.print(path)
+            #self.print(path)
 
     def print(self, path: str):
         with h5py.File(path, "r") as hf:
@@ -60,7 +60,48 @@ class OperaCleaning:
 
     def clean_from_torch(self, path: str):
         device = "cuda:0"
-        batch_size = 4096
+        batch_size = 512
+        
+        with h5py.File(path, "r+") as hf:
+            if 'reflbt0' in path:
+                data = hf['REFL-BT']
+            else:
+                data = hf[self.KEY]
+
+            num_images = data.shape[0]
+            num_bands = data.shape[1]
+            print(
+                f"Cleaning file: {path}, number of images: {num_images}, number of bands: {num_bands}",
+                flush=True,
+            )
+            
+            for start in range(0, num_images, batch_size):
+                end = min(start + batch_size, num_images)
+                
+                # Read data and create tensor with pinned memory
+                numpy_data = data[start:end][:]
+                arr = torch.from_numpy(numpy_data)
+                # Method 5: Early exit if data is clean (fastest for clean data)
+                if torch.all(torch.isfinite(arr)) and torch.all(arr >= 0):
+                    # Data is already clean, skip processing
+                    continue
+                
+                # Only move to GPU and process if needed
+                arr = arr.pin_memory().to(device, non_blocking=True)
+                torch.where(torch.isfinite(arr) & (arr >= 0), arr, torch.tensor(0.0, dtype=arr.dtype, device=arr.device), out=arr)
+                data[start:end] = arr.to("cpu", non_blocking=True).numpy()
+
+                # Apply operations in-place
+                #torch.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0, out=arr)
+                #torch.clamp(arr, min=0.0, out=arr)
+                
+                # Write back using pinned memory
+                #data[start:end] = arr.to("cpu", non_blocking=True).numpy()
+
+
+    def clean_from_torch_old(self, path: str):
+        device = "cuda:0"
+        batch_size = 1024
         with h5py.File(path, "r+") as hf:
             data = hf[self.KEY]
             num_images = data.shape[0]
@@ -71,8 +112,9 @@ class OperaCleaning:
             )
             for start in range(0, num_images, batch_size):
                 end = min(start + batch_size, num_images)
-                arr = torch.tensor(data[start:end][:]).to(device)
+                arr = torch.from_numpy(data[start:end][:]).to(device)
                 arr = torch.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+                arr = arr.clamp(min=0.0)
                 data[start:end] = arr.to("cpu").numpy()
 
 

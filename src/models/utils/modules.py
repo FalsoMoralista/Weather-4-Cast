@@ -564,7 +564,23 @@ class Block(nn.Module):
         else:
             y = self.attn(self.norm1(x), mask=mask, attn_mask=attn_mask)
         x = x + self.drop_path(y)
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        #x = x + self.drop_path(self.mlp(self.norm2(x)))
+        try:
+            out = self.mlp(self.norm2(x))
+            x = x + self.drop_path(out)
+        except RuntimeError as e:
+            if "CUDA driver error: invalid argument" in str(e):
+                print("\n[DEBUG] Caught CUDA invalid argument in Block.mlp", flush=True)
+                print(f"  Input to Block: {tuple(x.shape)}, dtype={x.dtype}, device={x.device}", flush=True)
+                # norm2 output
+                normed = self.norm2(x)
+                print(f"  norm2(x) shape: {tuple(normed.shape)}, finite?: {torch.isfinite(normed).all().item()}", flush=True)
+                # mlp hidden info if available
+                if hasattr(self.mlp, "fc1"):
+                    print(f"  mlp.fc1.weight: {tuple(self.mlp.fc1.weight.shape)}", flush=True)
+                if hasattr(self.mlp, "fc2"):
+                    print(f"  mlp.fc2.weight: {tuple(self.mlp.fc2.weight.shape)}", flush=True)
+            raise
         return x
 
 

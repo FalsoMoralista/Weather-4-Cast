@@ -16,8 +16,9 @@ class ReductionView(nn.Module):
         self.dim_out = dim_out
 
     def forward(self, x):
+        B, _, _ = x.shape
         return x.view(
-            self.B,
+            B,
             self.T,
             self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
@@ -194,10 +195,7 @@ class ModelWrapper(nn.Module):
             W_patches=W_patches,
         )
         regressed = self.vision_decoder(vjepa_out)  # B, 3136, 324
-        del tokens
-        del vjepa_out
         
-        #print("Regressed shape:", regressed.shape, "it should be (B, 3136, 324)")
         out = regressed.view(
             B,
             self.num_target_channels,
@@ -205,6 +203,5 @@ class ModelWrapper(nn.Module):
             self.vjepa_size_out * self.vjepa_size_in,
             self.vjepa_size_out * self.vjepa_size_in,
         )
-        #print("Final output shape:", out.shape, "it should be (B, 16, 1, 252, 252)")
 
         return out

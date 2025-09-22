@@ -10,6 +10,8 @@ fi
 # Extract the argument
 YAML_FILE_NAME="$1"
 
+#export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
+
 # Run the Python script with the specified YAML file
 python main_dinov3.py \
   --fname configs/"${YAML_FILE_NAME}.yaml" \

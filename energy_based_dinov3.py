@@ -17,9 +17,9 @@ try:
     os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
     # TODO: testing op below
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-
 except Exception:
     pass
+
 
 import copy
 import logging
@@ -29,6 +29,8 @@ import yaml
 import numpy as np
 
 import torch
+#torch.autograd.set_detect_anomaly(True)
+
 import torch.nn as nn
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -66,13 +68,10 @@ from torchvision import transforms
 from PIL import Image
 import random
 
-
-import h5py
-
 # --
 log_timings = True
 log_freq = 128
-checkpoint_freq = 10
+checkpoint_freq = 5
 # --
 
 _GLOBAL_SEED = 0
@@ -125,7 +124,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 512  # batch_size = accum_iter * batch_size
+    accum_iter = 256  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -272,10 +271,11 @@ def main(args, resume_preempt=False):
         "../dinov3", "dinov3_vit7b16", source="local", weights=load_path
     ).to(device, dtype=torch.bfloat16)
 
+    for p in dinov3.parameters():
+        p.requires_grad = False
+
     dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
-    # for p in dinov3.parameters():
-    #    p.requires_grad = False
 
     # print("Dinov3 Model:", dinov3)
 
@@ -317,11 +317,11 @@ def main(args, resume_preempt=False):
         use_bfloat16=use_bfloat16,
     )
 
-    model = DistributedDataParallel(model, static_graph=True)
+    #model = DistributedDataParallel(model, static_graph=True)
 
     def save_checkpoint(epoch):
         save_dict = {
-            "model": model.module.state_dict(),
+            "model": model.state_dict(),
             "opt": optimizer.state_dict(),
             "scaler": None if scaler is None else scaler.state_dict(),
             "epoch": epoch,
@@ -370,66 +370,58 @@ def main(args, resume_preempt=False):
 
             def load_imgs():
                 img = image.to(device, non_blocking=True, dtype=torch.float32)
+                img[~torch.isfinite(img)] = 0  
                 target = label.to(device, non_blocking=True, dtype=torch.float32)
+                #isFinite = torch.isfinite(img)
+                #if not torch.all(isFinite):
+                #    torch.where(isFinite, img, torch.tensor(0.0, dtype=torch.float32, device=device), out=img)
                 return (img, target)
 
             def train_step():
-                x, y = load_imgs()
-                #x = torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
-                #y = torch.nan_to_num(y, nan=0.0, posinf=0.0, neginf=0.0)
 
-                with torch.amp.autocast(
-                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
-                ):
+                x, y = load_imgs()
+
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
                     vjepa_embeddings = model(x)
                     del x
-
-                # allocated_bytes = torch.cuda.max_memory_allocated()
-                # allocated_gb = allocated_bytes / (1024**3)
-                # print("Max allocated mem from feature extract:", allocated_gb)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
                 del vjepa_embeddings
                 del y
-                torch.cuda.empty_cache()
                 loss_val = loss.item()
-
-                # Clear embedding tensors after loss computation
-                # del (projector_embeddings, positive_embeddings)
 
                 loss_meter.update(loss_val)
 
                 if accum_iter > 1:
                     loss = loss / accum_iter
 
-                #  Step 2. Backward & step
+                # Backward pass
                 if use_bfloat16:
                     scaler.scale(loss).backward()
-                    torch.cuda.empty_cache()
-                    update_grad = (itr + 1) % accum_iter == 0
-                    if update_grad:
+                else:
+                    loss.backward()
+
+                update_grad = (itr + 1) % accum_iter == 0
+                if update_grad:
+                    if use_bfloat16:
                         scaler.unscale_(optimizer)
                         scaler.step(optimizer)
                         scaler.update()
-                        _new_lr = scheduler.step()
-                        _new_wd = wd_scheduler.step()
-                        # momentum update of target encoder
                     else:
-                        _new_lr = scheduler.get_last_lr()[0]
-                        _new_wd = wd_scheduler.get_last_value()
+                        optimizer.step()
+                    _new_lr = scheduler.step()
+                    _new_wd = wd_scheduler.step()
+                else:
+                    _new_lr = scheduler.get_last_lr()[0]
+                    _new_wd = wd_scheduler.get_last_value()
 
-                else:  # not used
-                    loss.backward()
-                    optimizer.step()
+                if update_grad:
+                    optimizer.zero_grad()
 
                 # grad_stats = grad_logger(model.module.named_parameters())
 
-                if (itr + 1) % accum_iter == 0:
-                    optimizer.zero_grad()
-
                 return (loss_val, _new_lr, _new_wd)
 
-            torch.cuda.empty_cache()
             (loss, _new_lr, _new_wd), etime = gpu_timer(train_step)
 
             total_loss_meter.update(loss)
@@ -468,12 +460,8 @@ def main(args, resume_preempt=False):
                     #            grad_stats.max,
                     #        )
                     #    )
-
             log_stats()
-
-        testAcc1 = AverageMeter()
-        testAcc5 = AverageMeter()
-        test_loss = AverageMeter()
+        # End of epoch
 
         # Warning: Enabling distributed evaluation with an eval dataset not divisible by process number
         # will slightly alter validation results as extra duplicate entries are added to achieve equal
@@ -481,7 +469,7 @@ def main(args, resume_preempt=False):
 
         @torch.no_grad()
         def evaluate():
-            model.module.eval()
+            model.eval()
             # -- Enable shuffling to reduce monitor bias
             supervised_sampler_val.set_epoch(epoch)
 
@@ -496,7 +484,7 @@ def main(args, resume_preempt=False):
                     with torch.inference_mode():
                         reconstructed_matrix = model(images)
 
-                mae = MAE(reconstructed_matrix, labels)
+                mae = F.smooth_l1_loss(reconstructed_matrix, labels) #MAE(reconstructed_matrix, labels)
                 test_mae.update(mae)
 
             total_test_loss_meter.update(test_mae)
@@ -508,12 +496,13 @@ def main(args, resume_preempt=False):
 
         vtime = gpu_timer(evaluate)
 
-        model.module.train(True)
-        model.module.backbone.eval()
-        model.module.backbone.requires_grad_(False)
-
-        params = sum(p.numel() for p in model.module.parameters() if p.requires_grad)
-        print(f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? ")
+        model.train(True)
+        model.backbone.eval()
+        model.backbone.requires_grad_(False)
+        
+        if epoch + 1 == 1:
+            params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+            print(f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? ")
 
         stats_logger.log(
             epoch + 1,
