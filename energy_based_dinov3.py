@@ -492,7 +492,7 @@ def main(args, resume_preempt=False):
                 mae = F.smooth_l1_loss(reconstructed_matrix, labels) #MAE(reconstructed_matrix, labels)
                 test_mae.update(mae)
 
-            total_test_loss_meter.update(test_mae)
+            total_test_loss_meter.update(test_mae.avg)
 
             logger.info(f"Average accuracy over evaluation dataset: {test_mae.avg:.3f}")
             logger.info(

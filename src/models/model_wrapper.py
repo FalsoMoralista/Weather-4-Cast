@@ -6,46 +6,6 @@ import torch.nn as nn
 import torchvision.transforms as T
 from src.models.vision_transformer import VisionTransformer
 
-
-class ReductionView(nn.Module):
-    def __init__(self, T, vjepa_size_in, dim_out, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.T = T
-        self.vjepa_size_in = vjepa_size_in
-        self.dim_out = dim_out
-
-    def forward(self, x):
-        B, _, _ = x.shape
-        return x.view(
-            B,
-            self.T,
-            self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out,
-        )
-
-
-class StretcherView(nn.Module):
-    def __init__(
-        self,
-        dim_out,
-        num_target_channels,
-        vjepa_size_in,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.dim_out = dim_out
-        self.num_target_channels = num_target_channels
-        self.vjepa_size_in = vjepa_size_in
-
-    def forward(self, x):
-        return x.view(
-            -1,
-            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out // 2,
-        )
-
-
 class VisionTransformerDecoder(nn.Module):
     '''
         Non auto-regressive pixel decoder.
@@ -125,50 +85,6 @@ class VisionTransformerDecoder(nn.Module):
         return x
 
 
-class DecoderVisionTransformer(nn.Module):
-    def __init__(
-        self,
-        T,
-        dim_out,
-        num_layers,
-        num_heads,
-        num_target_channels,
-        H_patches,
-        W_patches,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.T = T
-        self.H_patches = H_patches
-        self.W_patches = W_patches
-        self.num_target_channels = num_target_channels
-        self.vision_decoder = VisionTransformer(
-            img_size=(224, 224),
-            patch_size=16,
-            in_chans=num_target_channels,  # 16
-            embed_dim=dim_out // 2,  # 1024
-            depth=num_layers,
-            num_heads=num_heads,
-            mlp_ratio=4,
-            qkv_bias=True,
-            norm_layer=nn.LayerNorm,
-            batch_first=True,
-            use_rope=True,
-            tubelet_size=1,
-            ignore_patches=True,
-            use_activation_checkpointing=True
-        )
-
-    def forward(self, x):
-        return self.vision_decoder(
-            x,
-            T=self.num_target_channels,
-            tokenize=False,
-            H_patches=self.H_patches,
-            W_patches=self.W_patches,
-        )
-
 
 class ModelWrapper(nn.Module):
     def __init__(
@@ -216,41 +132,6 @@ class ModelWrapper(nn.Module):
             mean=[0.430, 0.411, 0.296],
             std=[0.213, 0.156, 0.143],
         )
-        
-        #self.vision_decoder = nn.Sequential(
-        #    OrderedDict(
-        #        [
-        #            (
-        #                "linear_1", nn.Linear(dim_in, dim_out), # From  (B, 4*196, 4096) to (B, 4*196, 2048)
-        #            ),
-        #            ("act_1", nn.GELU()),
-        #            ("reduction_view", ReductionView(num_frames, vjepa_size_in, dim_out)),
-        #            (
-        #                "time_stretcher",
-        #                nn.Conv2d(4,num_target_channels,kernel_size=3,stride=1,padding=1,), # From (B, 4, 196, 2048) into (B, 16, 196, 2048) i.e., time axis expansion
-        #            ), 
-        #            ("act_2", nn.GELU()),
-        #            (
-        #                "linear_2", nn.Linear(dim_out, dim_out // 2), # From  (B, 16*196, 2048) to (B, 16*196, 1024)
-        #            ), 
-        #            ("act_3", nn.GELU()),
-        #            ("stretcher_view", StretcherView(dim_out, num_target_channels, vjepa_size_in)),
-        #            (
-        #                "decoder",
-        #                DecoderVisionTransformer(
-        #                    num_frames,
-        #                    dim_out,
-        #                    num_decoder_layers,
-        #                    num_heads,
-        #                    num_target_channels,
-        #                    224 // self.patch_size,
-        #                    224 // self.patch_size,
-        #                ),
-        #            ),
-        #            ("output_regression", nn.Linear(dim_out // 2, last_linear_dimension)),
-        #        ]
-        #    )
-        #)
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (B, T=4, 11, 252, 252)
