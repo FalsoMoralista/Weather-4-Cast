@@ -52,6 +52,7 @@ def make_sat_dataset(
         pin_memory=pin_mem,
         num_workers=num_workers,
         persistent_workers=False,
+        prefetch_factor=8,
         worker_init_fn=worker_init_fn,
     )
     logger.info("Sat Dataset dataloader created")

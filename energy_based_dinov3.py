@@ -70,7 +70,7 @@ import random
 
 # --
 log_timings = True
-log_freq = 256
+log_freq = 128
 checkpoint_freq = 1
 # --
 
@@ -124,7 +124,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 256  # batch_size = accum_iter * batch_size
+    accum_iter = 128  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -190,7 +190,7 @@ def main(args, resume_preempt=False):
     load_path = None
 
     if load_model:
-        load_path = "/home/lucianodourado/dinov3-weights/dinov3_vit7b16_pretrain_sat493m-a6675841.pth"
+        load_path = "/home/lucianodourado/dinov3-weights/dinov3_vitl16_pretrain_sat493m-eadcf0ff.pth"
 
     # -- make csv_logger
     csv_logger = CSVLogger(
@@ -253,12 +253,12 @@ def main(args, resume_preempt=False):
         mlp_ratio=4,
         num_frames=4,
         use_rope=True,
-        embed_dim=4096,
-        num_heads=32,
-        depth=6,
+        embed_dim=1024,
+        num_heads=16,
+        depth=16,
         tubelet_size=1,
         ignore_patches=True,
-        use_activation_checkpointing=True,
+        use_activation_checkpointing=False,
     )
     vjepa.patch_embed = nn.Identity()
 
@@ -268,8 +268,8 @@ def main(args, resume_preempt=False):
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
 
     dinov3 = torch.hub.load(
-        "../dinov3", "dinov3_vit7b16", source="local", weights=load_path
-    ).to(device, dtype=torch.bfloat16)
+        "../dinov3", "dinov3_vitl16", source="local", weights=load_path
+    ).to(device)
 
     for p in dinov3.parameters():
         p.requires_grad = False
@@ -283,15 +283,12 @@ def main(args, resume_preempt=False):
         backbone=dinov3,
         vjepa=vjepa,
         patch_size=16,
-        dim_in=4096,
-        dim_out=2048,
+        dim_out=1024,
         num_heads=16,
-        num_decoder_layers=2,
+        num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
-        last_linear_dimension=324,
-        batch_size=batch_size,
         num_frames=4,
     ).to(device)
 
@@ -389,11 +386,9 @@ def main(args, resume_preempt=False):
 
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
                     vjepa_embeddings = model(x)
-                    del x
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
-                del vjepa_embeddings
-                del y
+
                 loss_val = loss.item()
 
                 loss_meter.update(loss_val)
