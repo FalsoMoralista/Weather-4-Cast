@@ -58,7 +58,6 @@ import time
 # from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 # from timm.utils import accuracy
 
-from sklearn.metrics import accuracy_score
 
 
 from src.models.model_wrapper import ModelWrapper
