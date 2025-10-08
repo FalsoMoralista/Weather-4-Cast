@@ -5,6 +5,7 @@ import numpy as np
 import sys
 from src.models.vision_transformer import VisionTransformer
 from src.models.model_wrapper import ModelWrapper
+from src.datasets.InferenceDataset import InferenceDataset, worker_init_fn
 
 _GLOBAL_SEED = 0
 np.random.seed(_GLOBAL_SEED)
@@ -95,27 +96,52 @@ for epoch in range(2, 3, 1):
         logger.info(f'Encountered exception when loading checkpoint {e}')
         epoch = 0
 
-    # TODO: Load dataset
-    f_names = ['roxi_0008.cum1test20.reflbt0.ns.h5','roxi_0009.cum1test20.reflbt0.ns.h5', 'roxi_0010.cum1test20.reflbt0.ns.h5']
-
-    ROOT: str = "/home/lucianodourado/weather-4-cast/dataset/w4c24" # TODO colocar em .yaml
-    task = 'cum1' # TODO colocar em .yaml (futuramente)
+    task = 'cum1' # TODO colocar em .yaml
+    years = ['19', '20']
+    filenames = ['roxi_0008', 'roxi_0009', 'roxi_0010']
     
-    root = Path(self.dataset_path)
-    years = root.glob("20*")
-    self.paths = [root / str(year) for year in self.years]
-    hrit_path = [p / "HRIT" for p in self.paths]
-    year = year.replace('20', '')
-    if task == "cum1":
-        for p in self.hrit_path:
-            files.extend(p.glob(f"*cum1{year}"))    
+    for year in years:
+        predictions = {}
+        for name in filenames:
+            print('Year:', year)
+            type = name + '.' + task + "test" + year
+            dataset = InferenceDataset(InferenceDataset.ROOT, type=type)
 
+            dist_sampler = torch.utils.data.distributed.DistributedSampler(
+                dataset=dataset, num_replicas=1, rank=0
+            )
 
-    @torch.no_grad()
-    def evaluate():
-        for _, x in enumerate(supervised_loader_val):
-            images = x.to(device, non_blocking=True, dtype=torch.float32)
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
-                with torch.inference_mode():
-                    reconstructed_matrix = model(images)
+            loader = torch.utils.data.DataLoader(
+                dataset,
+                sampler=dist_sampler,
+                batch_size=64,
+                drop_last=False,
+                pin_memory=True,
+                num_workers=8,
+                persistent_workers=False,
+                worker_init_fn=worker_init_fn,
+            )
+
+            @torch.no_grad()
+            def evaluate():
+                for idx, x in enumerate(loader):
+                    images = x.to(device, non_blocking=True, dtype=torch.float32)
+                    
+                    images = torch.nan_to_num(images, nan=0.0, posinf=0.0, neginf=0.0)
+                    images = torch.clamp_min(images, 0)                    
+
+                    with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
+                        with torch.inference_mode():
+                            reconstructed_matrix = model(images).squeeze(2)
+                            if not type in predictions:
+                                predictions[type] = []
+                            predictions[type].append(reconstructed_matrix)
+                predictions[type] = torch.cat(predictions[type], dim=0)
+                print(f'Predictions shape {predictions[type].size()}')    
+            evaluate()
+        torch.save(predictions, 'predictions_{}.pth'.format(task+'test'+year))
+        print('Predictions:', predictions)
+        print('Predictions length:', len(predictions))
+        
+
                     
