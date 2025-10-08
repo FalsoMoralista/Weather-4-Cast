@@ -78,8 +78,8 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 case_id = row['Case-id']
 
                 
-                x_top_left, x_bottom_right = row['x-top-left']/6, row['x-bottom-right']/6
-                y_top_left, y_bottom_right = row['y-top-left']/6, row['y-bottom-right']/6
+                x_top_left, x_bottom_right = row['x-top-left']//6, row['x-bottom-right']//6
+                y_top_left, y_bottom_right = row['y-top-left']//6, row['y-bottom-right']//6
 
                 slot_start, slot_end = row['slot-start'], row['slot-end']
 
