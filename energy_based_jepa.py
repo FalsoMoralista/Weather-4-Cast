@@ -261,20 +261,19 @@ def main(args, resume_preempt=False):
         use_activation_checkpointing=False,
         in_chans=11,
     )
-    vjepa_checkpoint = torch.load('./jepa_checkpoints/vjepa_vitg.pt')
+    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     print(vjepa_checkpoint.keys())
-    encoder_weights = vjepa_checkpoint['encoder']
-    for k, v in encoder_weights.items():
+    encoder_weights = vjepa_checkpoint["encoder"]
+    for k, v in vjepa_checkpoint["encoder"].items():
         k = k.replace("module.backbone.", "")
         encoder_weights.update({k: v})
-#    print(vjepa_checkpoint['encoder'])
     vjepa.load_state_dict(encoder_weights)
-#    vjepa.patch_embed = PatchEmbed3D(
-#        patch_size=patch_size,
-#        tubelet_size=1,
-#        in_chans=11,
-#        embed_dim=1024,
-#    )
+    #    vjepa.patch_embed = PatchEmbed3D(
+    #        patch_size=patch_size,
+    #        tubelet_size=1,
+    #        in_chans=11,
+    #        embed_dim=1024,
+    #    )
     vjepa = vjepa.to(device)
 
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
