@@ -49,7 +49,7 @@ from src.datasets.SatDataset import make_sat_dataset
 from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
 
 from src.models.utils.patch_embed import PatchEmbed3D
-from src.models.vision_transformer import VisionTransformer
+import src.models.vision_transformer as vit_models
 from src.utils.wrappers import MultiSeqWrapper
 
 # from src.transforms import make_transforms
@@ -248,7 +248,7 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    vjepa = VisionTransformer(
+    vjepa = vit_models.__dict__["vit_giant"](
         img_size=(224, 224),
         patch_size=16,
         mlp_ratio=4,
@@ -262,8 +262,8 @@ def main(args, resume_preempt=False):
         use_activation_checkpointing=False,
         in_chans=11,
     )
-    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     vjepa = MultiSeqWrapper(vjepa)
+    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = vjepa_checkpoint["encoder"]
     vjepa.load_state_dict(encoder_checkpoint)
     #    vjepa.patch_embed = PatchEmbed3D(
