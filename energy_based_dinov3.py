@@ -29,7 +29,7 @@ import yaml
 import numpy as np
 
 import torch
-#torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 import torch.nn as nn
 import torch.multiprocessing as mp
@@ -59,8 +59,8 @@ import time
 # from timm.utils import accuracy
 
 
-
 from src.models.model_wrapper import ModelWrapper
+from src.models.model_v2 import ModelWrapperV2
 
 
 from torchvision import transforms
@@ -246,7 +246,21 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
+    # vjepa = VisionTransformer(
+    #     img_size=(224, 224),
+    #     patch_size=16,
+    #     mlp_ratio=4,
+    #     num_frames=4,
+    #     use_rope=True,
+    #     embed_dim=1024,
+    #     num_heads=16,
+    #     depth=16,
+    #     tubelet_size=1,
+    #     ignore_patches=True,
+    #     use_activation_checkpointing=False,
+    # )
     vjepa = VisionTransformer(
+        in_chans=11,
         img_size=(224, 224),
         patch_size=16,
         mlp_ratio=4,
@@ -275,11 +289,22 @@ def main(args, resume_preempt=False):
 
     dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
-
     # print("Dinov3 Model:", dinov3)
 
-    model = ModelWrapper(
-        backbone=dinov3,
+    # model = ModelWrapper(
+    #     backbone=dinov3,
+    #     vjepa=vjepa,
+    #     patch_size=16,
+    #     dim_out=1024,
+    #     num_heads=16,
+    #     num_decoder_layers=8,
+    #     num_target_channels=16,
+    #     vjepa_size_in=14,
+    #     vjepa_size_out=18,
+    #     num_frames=4,
+    # ).to(device)
+
+    model = ModelWrapperV2(
         vjepa=vjepa,
         patch_size=16,
         dim_out=1024,
@@ -313,14 +338,16 @@ def main(args, resume_preempt=False):
         use_bfloat16=use_bfloat16,
     )
 
-    #model = DistributedDataParallel(model, static_graph=True)
+    # model = DistributedDataParallel(model, static_graph=True)
 
     def save_checkpoint(epoch):
-
         model_state_dict = {
-            k: v for k, v in model.state_dict().items()
-            if not k.startswith("backbone") # Remove pre-trained backbone from checkpoint
-        } 
+            k: v
+            for k, v in model.state_dict().items()
+            if not k.startswith(
+                "backbone"
+            )  # Remove pre-trained backbone from checkpoint
+        }
 
         save_dict = {
             "model": model_state_dict,
@@ -372,18 +399,19 @@ def main(args, resume_preempt=False):
 
             def load_imgs():
                 img = image.to(device, non_blocking=True, dtype=torch.float32)
-                img[~torch.isfinite(img)] = 0  
+                img[~torch.isfinite(img)] = 0
                 target = label.to(device, non_blocking=True, dtype=torch.float32)
-                #isFinite = torch.isfinite(img)
-                #if not torch.all(isFinite):
+                # isFinite = torch.isfinite(img)
+                # if not torch.all(isFinite):
                 #    torch.where(isFinite, img, torch.tensor(0.0, dtype=torch.float32, device=device), out=img)
                 return (img, target)
 
             def train_step():
-
                 x, y = load_imgs()
 
-                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
+                with torch.amp.autocast(
+                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
+                ):
                     vjepa_embeddings = model(x)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
@@ -460,6 +488,7 @@ def main(args, resume_preempt=False):
                     #            grad_stats.max,
                     #        )
                     #    )
+
             log_stats()
         # End of epoch
 
@@ -483,7 +512,9 @@ def main(args, resume_preempt=False):
                     with torch.inference_mode():
                         reconstructed_matrix = model(images)
 
-                mae = F.smooth_l1_loss(reconstructed_matrix, labels) #MAE(reconstructed_matrix, labels)
+                mae = F.smooth_l1_loss(
+                    reconstructed_matrix, labels
+                )  # MAE(reconstructed_matrix, labels)
                 test_mae.update(mae)
 
             total_test_loss_meter.update(test_mae.avg)
@@ -498,10 +529,12 @@ def main(args, resume_preempt=False):
         model.train(True)
         model.backbone.eval()
         model.backbone.requires_grad_(False)
-        
+
         if epoch + 1 == 1:
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            print(f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? ")
+            print(
+                f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? "
+            )
 
         stats_logger.log(
             epoch + 1,
