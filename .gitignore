@@ -9,3 +9,4 @@ __pycache__/
 .venv
 slurm*
 logs/
+jepa_checkpoints/
