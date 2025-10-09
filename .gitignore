@@ -8,5 +8,4 @@ __pycache__/
 *.py[cod]
 .venv
 slurm*
-
-predictions_cum1test*
+logs/
