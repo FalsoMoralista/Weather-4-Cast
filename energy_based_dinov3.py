@@ -60,7 +60,6 @@ import time
 
 
 from src.models.model_wrapper import ModelWrapper
-from src.models.model_v2 import ModelWrapperV2
 
 
 from torchvision import transforms
@@ -246,21 +245,7 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    # vjepa = VisionTransformer(
-    #     img_size=(224, 224),
-    #     patch_size=16,
-    #     mlp_ratio=4,
-    #     num_frames=4,
-    #     use_rope=True,
-    #     embed_dim=1024,
-    #     num_heads=16,
-    #     depth=16,
-    #     tubelet_size=1,
-    #     ignore_patches=True,
-    #     use_activation_checkpointing=False,
-    # )
     vjepa = VisionTransformer(
-        in_chans=11,
         img_size=(224, 224),
         patch_size=16,
         mlp_ratio=4,
@@ -280,31 +265,19 @@ def main(args, resume_preempt=False):
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
 
-    # dinov3 = torch.hub.load(
-    #     "../dinov3", "dinov3_vitl16", source="local", weights=load_path
-    # ).to(device)
+    dinov3 = torch.hub.load(
+        "../dinov3", "dinov3_vitl16", source="local", weights=load_path
+    ).to(device)
 
-    # for p in dinov3.parameters():
-    #     p.requires_grad = False
+    for p in dinov3.parameters():
+        p.requires_grad = False
 
-    # dinov3 = torch.compile(dinov3, mode="reduce-overhead")
+    dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
     # print("Dinov3 Model:", dinov3)
 
-    # model = ModelWrapper(
-    #     backbone=dinov3,
-    #     vjepa=vjepa,
-    #     patch_size=16,
-    #     dim_out=1024,
-    #     num_heads=16,
-    #     num_decoder_layers=8,
-    #     num_target_channels=16,
-    #     vjepa_size_in=14,
-    #     vjepa_size_out=18,
-    #     num_frames=4,
-    # ).to(device)
-
-    model = ModelWrapperV2(
+    model = ModelWrapper(
+        backbone=dinov3,
         vjepa=vjepa,
         patch_size=16,
         dim_out=1024,
