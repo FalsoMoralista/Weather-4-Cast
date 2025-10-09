@@ -1,0 +1,72 @@
+data:
+  batch_size: 16
+  color_jitter_strength: 0.0
+  crop_scale:
+  - 0.3
+  - 1.0
+  crop_size: 224
+  drop_path: 0.25
+  mixup: 0.0 #0.8
+  nb_classes: 1081  
+  cutmix: 0.0 #1.0
+  reprob: 0.25
+  image_folder: /home/rtcalumby/adam/luciano/plantnet_300K/  
+  num_workers: 8
+  pin_mem: true
+  root_path: /home/rtcalumby/adam/luciano/
+  cache_path: ../cache/plantnet_300k
+  use_color_distortion: false
+  use_gaussian_blur: false
+  use_horizontal_flip: false
+  resume_epoch: 0
+dinov2: false
+dinov2_meta:
+  model_name: vit_large  
+k_means:
+  K_range: [2,3,4,5]
+  reinitialize_centroids: 5
+vicreg:
+  alpha: 0
+  beta: 0.0
+  gamma: 0.0  
+logging:
+  folder: /home/lucianodourado/weather-4-cast/logs/
+  write_tag: vjepa2
+mask:
+  allow_overlap: false
+  aspect_ratio:
+  - 0.75
+  - 1.5
+  enc_mask_scale:
+  - 0.85
+  - 1.0
+  min_keep: 10
+  num_enc_masks: 1
+  num_pred_masks: 4
+  patch_size: 14
+  pred_mask_scale:
+  - 0.15
+  - 0.2
+meta:
+  copy_data: false
+  load_checkpoint: true
+  model_name: vit_huge
+  pred_depth: 12
+  pred_emb_dim: 384
+  read_checkpoint: null
+  use_bfloat16: true 
+optimization:
+  ema:
+  - 0.9
+  - 0.999
+  epochs: 50
+  final_lr: 8.0e-05 # Default: 1e-6
+  final_weight_decay: 0.45  
+  ipe_scale: 1.0
+  lr: 7.5e-04 #0.0007 # Default 0.0015 -> lr = base lr × batchsize / 256. (learning rate formula). /0.0007
+  start_lr: 5.0e-06 #0.00001 # Default: 0.0002 
+  warmup: 10
+  weight_decay: 5.0e-2 # (default: e-2)
+  label_smoothing: 0.1
+
+# mae lr: 0.0026. 6.5e-4 (blr)
