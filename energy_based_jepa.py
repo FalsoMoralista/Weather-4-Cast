@@ -361,7 +361,7 @@ def main(args, resume_preempt=False):
     logger.info(model)
 
     # TODO: ADJUST THIS later!
-    if resume_epoch != 0:
+    if False:
         target_encoder, optimizer, scaler, start_epoch = load_DC_checkpoint(
             device=device,
             r_path=load_path,
