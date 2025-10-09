@@ -246,21 +246,7 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    # vjepa = VisionTransformer(
-    #     img_size=(224, 224),
-    #     patch_size=16,
-    #     mlp_ratio=4,
-    #     num_frames=4,
-    #     use_rope=True,
-    #     embed_dim=1024,
-    #     num_heads=16,
-    #     depth=16,
-    #     tubelet_size=1,
-    #     ignore_patches=True,
-    #     use_activation_checkpointing=False,
-    # )
     vjepa = VisionTransformer(
-        in_chans=11,
         img_size=(224, 224),
         patch_size=16,
         mlp_ratio=4,
@@ -272,6 +258,11 @@ def main(args, resume_preempt=False):
         tubelet_size=1,
         ignore_patches=True,
         use_activation_checkpointing=False,
+        in_chans=11,
+    )
+    vjepa.load_state_dict(
+        torch.load("/home/lucianodourado/jepa_checkpoints/vjepa_vitg.pt"),
+        strict=True,
     )
     vjepa.patch_embed = nn.Identity()
 
