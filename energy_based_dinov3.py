@@ -280,14 +280,14 @@ def main(args, resume_preempt=False):
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
 
-    dinov3 = torch.hub.load(
-        "../dinov3", "dinov3_vitl16", source="local", weights=load_path
-    ).to(device)
+    # dinov3 = torch.hub.load(
+    #     "../dinov3", "dinov3_vitl16", source="local", weights=load_path
+    # ).to(device)
 
-    for p in dinov3.parameters():
-        p.requires_grad = False
+    # for p in dinov3.parameters():
+    #     p.requires_grad = False
 
-    dinov3 = torch.compile(dinov3, mode="reduce-overhead")
+    # dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
     # print("Dinov3 Model:", dinov3)
 
