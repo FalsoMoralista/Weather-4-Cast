@@ -50,6 +50,7 @@ from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
 
 from src.models.utils.patch_embed import PatchEmbed3D
 from src.models.vision_transformer import VisionTransformer
+from src.utils.wrappers import MultiSeqWrapper
 
 # from src.transforms import make_transforms
 import time
@@ -262,12 +263,9 @@ def main(args, resume_preempt=False):
         in_chans=11,
     )
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
-    print(vjepa_checkpoint.keys())
-    encoder_weights = vjepa_checkpoint["encoder"]
-    for k, v in vjepa_checkpoint["encoder"].items():
-        k = k.replace("module.backbone.", "")
-        encoder_weights.update({k: v})
-    vjepa.load_state_dict(encoder_weights)
+    vjepa = MultiSeqWrapper(vjepa)
+    encoder_checkpoint = vjepa_checkpoint["encoder"]
+    vjepa.load_state_dict(encoder_checkpoint)
     #    vjepa.patch_embed = PatchEmbed3D(
     #        patch_size=patch_size,
     #        tubelet_size=1,
