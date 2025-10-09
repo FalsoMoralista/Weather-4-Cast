@@ -247,33 +247,34 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    # vjepa = VisionTransformer(
-    #     img_size=(224, 224),
-    #     patch_size=16,
-    #     mlp_ratio=4,
-    #     num_frames=4,
-    #     use_rope=True,
-    #     embed_dim=1024,
-    #     num_heads=16,
-    #     depth=16,
-    #     tubelet_size=1,
-    #     ignore_patches=True,
-    #     use_activation_checkpointing=False,
-    #     in_chans=11,
-    # )
-    # vjepa.load_state_dict(
-    #     torch.load("/home/lucianodourado/weather-4-cast/jepa_checkpoints/vjepa_vitg.pt"),
-    #     strict=True,
-    # )
-    vjepa = torch.load(
-        "/home/lucianodourado/weather-4-cast/jepa_checkpoints/vjepa_vitg.pt"
-    )
-    vjepa.patch_embed = PatchEmbed3D(
-        patch_size=patch_size,
-        tubelet_size=1,
-        in_chans=11,
+    vjepa = VisionTransformer(
+        img_size=(224, 224),
+        patch_size=16,
+        mlp_ratio=4,
+        num_frames=4,
+        use_rope=True,
         embed_dim=1024,
+        num_heads=16,
+        depth=16,
+        tubelet_size=1,
+        ignore_patches=True,
+        use_activation_checkpointing=False,
+        in_chans=11,
     )
+    vjepa_checkpoint = torch.load('./jepa_checkpoints/vjepa_vitg.pt')
+    print(vjepa_checkpoint.keys())
+    encoder_weights = vjepa_checkpoint['encoder']
+    for k, v in encoder_weights.items():
+        k = k.replace("module.backbone.", "")
+        encoder_weights.update({k: v})
+#    print(vjepa_checkpoint['encoder'])
+    vjepa.load_state_dict(encoder_weights)
+#    vjepa.patch_embed = PatchEmbed3D(
+#        patch_size=patch_size,
+#        tubelet_size=1,
+#        in_chans=11,
+#        embed_dim=1024,
+#    )
     vjepa = vjepa.to(device)
 
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
