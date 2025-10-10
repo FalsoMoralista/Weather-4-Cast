@@ -192,6 +192,8 @@ class SatDataset(Dataset):
                     mode="bicubic",
                 )
 
+                input = input.permute(1, 0, 2, 3)
+
                 target = tensor(target)
                 return input, target
 
