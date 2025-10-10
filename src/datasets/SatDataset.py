@@ -36,7 +36,11 @@ def make_sat_dataset(
     copy_data=False,
     drop_last=False,
 ):
-    dataset = SatDataset(SatDataset.ROOT, type="train" if training else "val")
+    dataset = SatDataset(
+        SatDataset.ROOT,
+        type="train" if training else "val",
+        transform=transform,
+    )
 
     logger.info("Sat dataset created")
 
