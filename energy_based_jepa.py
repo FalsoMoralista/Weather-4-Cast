@@ -251,7 +251,7 @@ def main(args, resume_preempt=False):
     vjepa = vit_giant(
         patch_size=16,
         img_size=(224, 224),
-        # mlp_ratio=4,
+        mlp_ratio=4,
         num_frames=4,
         use_rope=True,
         # embed_dim=1024,
@@ -265,7 +265,7 @@ def main(args, resume_preempt=False):
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
     encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
-    msg = vjepa.load_state_dict(encoder_checkpoint)
+    msg = vjepa.load_state_dict(encoder_checkpoint, strict=False)
     print("Loading checkpoint with message:", msg)
     vjepa.patch_embed = PatchEmbed3D(
         patch_size=16,
