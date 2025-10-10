@@ -254,7 +254,7 @@ def main(args, resume_preempt=False):
         patch_size=16,
         tubelet_size=2,
         in_chans=11,
-        embed_dim=1024,
+        embed_dim=1408,
     )
     vjepa = vjepa.to(device)
 
