@@ -42,7 +42,14 @@ from src.models.model_v2 import ModelWrapperV2
 from src.models.utils.patch_embed import PatchEmbed3D
 from src.models.vision_transformer import vit_giant
 
-from vjepa2.app.vjepa.transforms import make_transforms
+from torchvision import transforms
+
+
+def make_transforms():
+    return transforms.Compose(
+        [transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+    )
+
 
 # --
 log_timings = True
