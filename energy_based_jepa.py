@@ -244,7 +244,7 @@ def main(args, resume_preempt=False):
         tubelet_size=1,
         # ignore_patches=True,
         # use_activation_checkpointing=False,
-        # in_chans=11,
+        in_chans=11,
     )
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
