@@ -57,13 +57,14 @@ def composed():
     )
 
 
-def make_transforms():
-    def transform(x):
-        t = composed()
-        x = t(x)
-        return permute(x)
+def transform_inner(x):
+    t = composed()
+    x = t(x)
+    return permute(x)
 
-    return transform
+
+def make_transforms():
+    return transform_inner
 
 
 # --
