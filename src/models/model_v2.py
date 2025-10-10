@@ -54,7 +54,7 @@ class VisionTransformerDecoder(nn.Module):
             img_size=(224, 224),
             patch_size=16,
             in_chans=num_target_channels,  # 16
-            embed_dim=dim_out,  # 1024
+            embed_dim=1408,  # 1024
             depth=num_layers,
             num_heads=num_heads,
             mlp_ratio=4,
@@ -68,6 +68,7 @@ class VisionTransformerDecoder(nn.Module):
         )
 
     def forward(self, x):
+        self.dim_out = 1408
         B, _, _ = x.shape
         x = x.view(
             B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out
@@ -140,7 +141,7 @@ class ModelWrapperV2(nn.Module):
 #        )
 
     def forward(self, x):
-        B, T, C, H, W = x.shape  # (B, T=4, 11, 252, 252)
+        B, C, T, H, W = x.shape  # (B, T=4, 11, 252, 252)
         # x = x.view(B * T, C, H, W)  # [B * T, 11, 252, 252]
         # x = self.downsample(x)
 #        x = self.normalize(x)
@@ -161,6 +162,7 @@ class ModelWrapperV2(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
+        print("Encoder output shape:", vjepa_out.shape)
         regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
         # print(f'regressed output size: {regressed.shape}',flush=True)
 

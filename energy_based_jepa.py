@@ -241,7 +241,7 @@ def main(args, resume_preempt=False):
         # embed_dim=1024,
         # num_heads=16,
         # depth=16,
-        tubelet_size=4,
+        tubelet_size=1,
         # ignore_patches=True,
         # use_activation_checkpointing=False,
         # in_chans=11,
@@ -249,11 +249,11 @@ def main(args, resume_preempt=False):
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
     encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
-    msg = vjepa.load_state_dict(encoder_checkpoint)
+    msg = vjepa.load_state_dict(encoder_checkpoint, strict=False)
     print("Loading checkpoint with message:", msg)
     vjepa.patch_embed = PatchEmbed3D(
         patch_size=16,
-        tubelet_size=4,
+        tubelet_size=1,
         in_chans=11,
         embed_dim=1408,
     )
