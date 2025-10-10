@@ -40,7 +40,7 @@ from src.helper import load_DC_checkpoint, init_vjepa_opt
 
 from src.models.model_v2 import ModelWrapperV2
 from src.models.utils.patch_embed import PatchEmbed3D
-from src.models.vision_transformer import vit_giant
+from src.models.vision_transformer import vit_giant, vit_huge_rope
 
 from torchvision import transforms
 
@@ -248,15 +248,15 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    vjepa = vit_giant(
+    vjepa = vit_huge_rope(
         patch_size=16,
         img_size=(224, 224),
-        mlp_ratio=4,
+        # mlp_ratio=4,
         num_frames=4,
-        use_rope=True,
-        # embed_dim=1024,
-        num_heads=16,
-        depth=16,
+        # use_rope=True,
+        # embed_dim=1280,
+        # num_heads=16,
+        # depth=16,
         tubelet_size=1,
         # ignore_patches=True,
         use_activation_checkpointing=False,
@@ -271,7 +271,7 @@ def main(args, resume_preempt=False):
         patch_size=16,
         tubelet_size=1,
         in_chans=11,
-        embed_dim=1408,
+        embed_dim=1280,
     )
     for name, p in vjepa.named_parameters():
         if "patch_embed" in name:
@@ -308,7 +308,7 @@ def main(args, resume_preempt=False):
     model = ModelWrapperV2(
         vjepa=vjepa,
         patch_size=16,
-        dim_out=1408,
+        dim_out=1280,
         num_heads=16,
         num_decoder_layers=8,
         num_target_channels=16,
