@@ -53,6 +53,8 @@ from src.models.utils.patch_embed import PatchEmbed3D
 from src.models.vision_transformer import VisionTransformer, vit_giant
 from src.utils.wrappers import MultiSeqWrapper
 
+from vjepa2.app.vjepa.transforms import make_transforms
+
 # from src.transforms import make_transforms
 import time
 
@@ -215,9 +217,11 @@ def main(args, resume_preempt=False):
         ("%d", "time (ms)"),
     )
 
+    video_transform = make_transforms()
+
     # -- init data-loaders/samplers
     train_dataset, supervised_loader_train, supervised_sampler_train = make_sat_dataset(
-        transform=None,
+        transform=video_transform,
         batch_size=batch_size,
         collator=None,
         pin_mem=True,
