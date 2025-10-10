@@ -67,46 +67,43 @@ class VisionTransformerDecoder(nn.Module):
         )
 
     def forward(self, x):
-        print("Decoder input shape:", x.shape)
+        # print("Decoder input shape:", x.shape)
         B, _, _ = x.shape
         x = x.view(
             B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out
         )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
-        print("Decoder reshaped input shape:", x.shape)
+        # print("Decoder reshaped input shape:", x.shape)
         x = self.time_expansion(
             x
         )  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
-        print("After time expansion:", x.shape)
+        # print("After time expansion:", x.shape)
         x = self.act(x)
         x = x.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
-        print("Before decoder:", x.shape)
-        try:
-            x = self.vit_decoder(
-                x,
-                T=self.num_target_channels,
-                tokenize=False,
-                H_patches=self.H_patches,
-                W_patches=self.W_patches,
-            )
-        except Exception as e:
-            print("Error during vit_decoder forward pass:", e)
-            raise e
-        print("After decoder:", x.shape)
+        # print("Before decoder:", x.shape)
+
+        x = self.vit_decoder(
+            x,
+            T=self.num_target_channels,
+            tokenize=False,
+            H_patches=self.H_patches,
+            W_patches=self.W_patches,
+        )
+        # print("After decoder:", x.shape)
         x = x.view(
             B * self.num_target_channels,
             self.dim_out,
             self.vjepa_size_in,
             self.vjepa_size_in,
         )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
-        print("Before conv regression:", x.shape)
+        # print("Before conv regression:", x.shape)
         x = self.conv_regression(x)
-        print("After conv regression:", x.shape)
+        # print("After conv regression:", x.shape)
         x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
-        print("Final output shape:", x.shape)
+        # print("Final output shape:", x.shape)
         return x
 
 
@@ -167,15 +164,13 @@ class ModelWrapperV2(nn.Module):
         # tokens = tokens.reshape(
         #     B, T * tokens.size(1), tokens.size(2)
         # ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
-        with torch.inference_mode():
-            vjepa_out = self.vjepa(
-                x=x,
-                tokenize=True,
-                T=T,
-                H_patches=H_patches,
-                W_patches=W_patches,
-            )
-        print("Encoder output shape:", vjepa_out.shape)
+        vjepa_out = self.vjepa(
+            x=x,
+            tokenize=True,
+            T=T,
+            H_patches=H_patches,
+            W_patches=W_patches,
+        )
         regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
         # print(f'regressed output size: {regressed.shape}',flush=True)
 
