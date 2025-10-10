@@ -34,7 +34,7 @@ from src.utils.distributed import init_distributed
 from src.utils.logging import CSVLogger, gpu_timer, AverageMeter
 
 from src.datasets.SatDataset import make_sat_dataset
-from utils.checkpoint import remove_prefix
+from utils.checkpoint import remove_prefix, remove_with_name
 
 from src.helper import load_DC_checkpoint, init_vjepa_opt
 
@@ -248,6 +248,7 @@ def main(args, resume_preempt=False):
     )
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
+    encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
     msg = vjepa.load_state_dict(encoder_checkpoint)
     print("Loading checkpoint with message:", msg)
     vjepa.patch_embed = PatchEmbed3D(
