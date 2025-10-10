@@ -167,13 +167,14 @@ class ModelWrapperV2(nn.Module):
         # tokens = tokens.reshape(
         #     B, T * tokens.size(1), tokens.size(2)
         # ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
-        vjepa_out = self.vjepa(
-            x=x,
-            tokenize=True,
-            T=T,
-            H_patches=H_patches,
-            W_patches=W_patches,
-        )
+        with torch.inference_mode():
+            vjepa_out = self.vjepa(
+                x=x,
+                tokenize=True,
+                T=T,
+                H_patches=H_patches,
+                W_patches=W_patches,
+            )
         print("Encoder output shape:", vjepa_out.shape)
         regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
         # print(f'regressed output size: {regressed.shape}',flush=True)
