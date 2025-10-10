@@ -45,24 +45,24 @@ from src.models.vision_transformer import vit_giant
 from torchvision import transforms
 
 
+def permute(x):
+    return x.permute(1, 0, 2, 3)
+
+
+def composed():
+    return transforms.Compose(
+        [
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
+
+
 def make_transforms():
-    def permute(x):
-        return x.permute(1, 0, 2, 3)
-
-    def composed():
-        return transforms.Compose(
-            [
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
-            ]
-        )
-
     def transform(x):
         t = composed()
         x = t(x)
         return permute(x)
-    
+
     return transform
 
 
@@ -321,7 +321,7 @@ def main(args, resume_preempt=False):
 
     allocated_bytes = torch.cuda.memory_allocated()
     allocated_gb = allocated_bytes / (1024**3)
-    print("allocated mem from model setup:", allocated_gb)
+    print("allocated mem from model setup:", allocated_gb, "gb")
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_vjepa_opt(
