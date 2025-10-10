@@ -47,7 +47,7 @@ class VisionTransformerDecoder(nn.Module):
         )
 
         self.conv_regression = nn.ConvTranspose2d(
-            in_channels=1024, out_channels=1, kernel_size=18, stride=18
+            in_channels=dim_out, out_channels=1, kernel_size=18, stride=18
         )
 
         self.vit_decoder = VisionTransformer(
@@ -60,7 +60,6 @@ class VisionTransformerDecoder(nn.Module):
             mlp_ratio=4,
             qkv_bias=True,
             norm_layer=partial(nn.LayerNorm, eps=1e-6),
-            batch_first=True,
             use_rope=True,
             tubelet_size=1,
             ignore_patches=True,
@@ -85,13 +84,17 @@ class VisionTransformerDecoder(nn.Module):
             self.dim_out,
         )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
         print("Before decoder:", x.shape)
-        x = self.vit_decoder(
-            x,
-            T=self.num_target_channels,
-            tokenize=False,
-            H_patches=self.H_patches,
-            W_patches=self.W_patches,
-        )
+        try:
+            x = self.vit_decoder(
+                x,
+                T=self.num_target_channels,
+                tokenize=False,
+                H_patches=self.H_patches,
+                W_patches=self.W_patches,
+            )
+        except Exception as e:
+            print("Error during vit_decoder forward pass:", e)
+            raise e
         print("After decoder:", x.shape)
         x = x.view(
             B * self.num_target_channels,
