@@ -250,8 +250,8 @@ def main(args, resume_preempt=False):
     print("Training dataset, length:", ipe * batch_size)
 
     vjepa = vit_giant(
-        # patch_size=16,
-        # img_size=(224, 224),
+        patch_size=16,
+        img_size=(224, 224),
         # mlp_ratio=4,
         num_frames=4,
         use_rope=True,
@@ -267,12 +267,12 @@ def main(args, resume_preempt=False):
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
     msg = vjepa.load_state_dict(encoder_checkpoint)
     print("Loading checkpoint with message:", msg)
-    #    vjepa.patch_embed = PatchEmbed3D(
-    #        patch_size=patch_size,
-    #        tubelet_size=1,
-    #        in_chans=11,
-    #        embed_dim=1024,
-    #    )
+    vjepa.patch_embed = PatchEmbed3D(
+        patch_size=16,
+        tubelet_size=2,
+        in_chans=11,
+        embed_dim=1024,
+    )
     vjepa = vjepa.to(device)
 
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)

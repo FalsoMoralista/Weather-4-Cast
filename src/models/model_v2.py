@@ -114,7 +114,7 @@ class ModelWrapperV2(nn.Module):
     ):
         super(ModelWrapperV2, self).__init__()
         self.vjepa = vjepa
-        self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
+#        self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
         self.num_target_channels = num_target_channels
         self.vjepa_size_in = vjepa_size_in
@@ -134,31 +134,32 @@ class ModelWrapperV2(nn.Module):
 
         # DinoV3 SAT normalization config
         # https://huggingface.co/facebook/dinov3-vit7b16-pretrain-sat493m/resolve/main/preprocessor_config.json
-        self.normalize = T.Normalize(
-            mean=[0.430, 0.411, 0.296],
-            std=[0.213, 0.156, 0.143],
-        )
+#        self.normalize = T.Normalize(
+#            mean=[0.430, 0.411, 0.296],
+#            std=[0.213, 0.156, 0.143],
+#        )
 
     def forward(self, x):
         B, T, C, H, W = x.shape  # (B, T=4, 11, 252, 252)
         # x = x.view(B * T, C, H, W)  # [B * T, 11, 252, 252]
         # x = self.downsample(x)
-        x = self.normalize(x)
+#        x = self.normalize(x)
 
         # with torch.inference_mode():
         #     features = self.backbone.forward_features(x)
         # tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
-        # H_patches = H // self.patch_size
-        # W_patches = W // self.patch_size
+        H_patches = H // self.patch_size
+        W_patches = W // self.patch_size
         # tokens = tokens.reshape(
         #     B, T * tokens.size(1), tokens.size(2)
         # ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
         vjepa_out = self.vjepa(
             x=x,
-            tokenize=False,
+            tokenize=True,
+ #           tokenize=False,
             T=T,
-            # H_patches=H_patches,
-            # W_patches=W_patches,
+            H_patches=H_patches,
+            W_patches=W_patches,
         )
         regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
         # print(f'regressed output size: {regressed.shape}',flush=True)
