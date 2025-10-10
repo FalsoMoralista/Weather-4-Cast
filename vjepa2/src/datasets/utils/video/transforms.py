@@ -16,8 +16,8 @@ from PIL import Image
 from torch import Tensor
 from torchvision import transforms
 
-import vjepa2.src.datasets.utils.video.functional as FF
-from vjepa2.src.datasets.utils.video.randaugment import rand_augment_transform
+import src.datasets.utils.video.functional as FF
+from src.datasets.utils.video.randaugment import rand_augment_transform
 
 _pil_interpolation_to_str = {
     Image.NEAREST: "PIL.Image.NEAREST",
