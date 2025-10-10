@@ -20,8 +20,6 @@ try:
 except Exception:
     pass
 
-
-import copy
 import logging
 import sys
 import yaml
@@ -29,48 +27,22 @@ import yaml
 import numpy as np
 
 import torch
-# torch.autograd.set_detect_anomaly(True)
-
-import torch.nn as nn
 import torch.multiprocessing as mp
-import torch.distributed as dist
 import torch.nn.functional as F
-from torch.nn.parallel import DistributedDataParallel
 
-from src.masks.multiblock import MaskCollator as MBMaskCollator
-from src.masks.utils import apply_masks
-from src.utils.distributed import init_distributed, AllReduce
-from src.utils.logging import CSVLogger, gpu_timer, AverageMeter  # , grad_logger
-
-from functools import partial
+from src.utils.distributed import init_distributed
+from src.utils.logging import CSVLogger, gpu_timer, AverageMeter
 
 from src.datasets.SatDataset import make_sat_dataset
 from utils.checkpoint import remove_prefix
 
-from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
+from src.helper import load_DC_checkpoint, init_vjepa_opt
 
+from src.models.model_v2 import ModelWrapperV2
 from src.models.utils.patch_embed import PatchEmbed3D
-from src.models.vision_transformer import VisionTransformer, vit_giant
-from src.utils.wrappers import MultiSeqWrapper
+from src.models.vision_transformer import vit_giant
 
 from vjepa2.app.vjepa.transforms import make_transforms
-
-# from src.transforms import make_transforms
-import time
-
-# --BROUGHT fRoM MAE
-# from timm.data.mixup import Mixup
-# from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
-# from timm.utils import accuracy
-
-
-from src.models.model_wrapper import ModelWrapper
-from src.models.model_v2 import ModelWrapperV2
-
-
-from torchvision import transforms
-from PIL import Image
-import random
 
 # --
 log_timings = True
