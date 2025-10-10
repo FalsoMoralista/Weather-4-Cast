@@ -241,7 +241,7 @@ def main(args, resume_preempt=False):
         # embed_dim=1024,
         # num_heads=16,
         # depth=16,
-        tubelet_size=2,
+        tubelet_size=4,
         # ignore_patches=True,
         # use_activation_checkpointing=False,
         # in_chans=11,
@@ -252,7 +252,7 @@ def main(args, resume_preempt=False):
     print("Loading checkpoint with message:", msg)
     vjepa.patch_embed = PatchEmbed3D(
         patch_size=16,
-        tubelet_size=2,
+        tubelet_size=4,
         in_chans=11,
         embed_dim=1408,
     )
