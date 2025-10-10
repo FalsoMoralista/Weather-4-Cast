@@ -257,8 +257,11 @@ def main(args, resume_preempt=False):
         in_chans=11,
         embed_dim=1408,
     )
+    for name, p in vjepa.named_parameters():
+        if "patch_embed" in name:
+            continue
+        p.requires_grad = False
     vjepa = vjepa.to(device)
-
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
 
