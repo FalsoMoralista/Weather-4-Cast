@@ -187,14 +187,15 @@ class SatDataset(Dataset):
                     idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
                 )
                 target = opera[self.OPERA_KEY][target_start:target_end]
-                if self.transform:
-                    input = self.transform(input)
 
                 input = F.interpolate(
                     tensor(input),
                     size=self.input_size,
                     mode="bicubic",
                 )
+
+                if self.transform:
+                    input = self.transform(input)
 
                 target = tensor(target)
                 return input, target
