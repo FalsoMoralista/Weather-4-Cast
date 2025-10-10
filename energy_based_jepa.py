@@ -40,7 +40,7 @@ from src.helper import load_DC_checkpoint, init_vjepa_opt
 
 from src.models.model_v2 import ModelWrapperV2
 from src.models.utils.patch_embed import PatchEmbed3D
-from src.models.vision_transformer import vit_giant, vit_huge_rope
+from src.models.vision_transformer import vit_large_rope
 
 from torchvision import transforms
 
@@ -248,7 +248,7 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    vjepa = vit_huge_rope(
+    vjepa = vit_large_rope(
         patch_size=16,
         img_size=(224, 224),
         # mlp_ratio=4,
@@ -262,21 +262,21 @@ def main(args, resume_preempt=False):
         use_activation_checkpointing=False,
         in_chans=11,
     )
-    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
+    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitl.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
     encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
     msg = vjepa.load_state_dict(encoder_checkpoint, strict=False)
     print("Loading checkpoint with message:", msg)
-    vjepa.patch_embed = PatchEmbed3D(
-        patch_size=16,
-        tubelet_size=1,
-        in_chans=11,
-        embed_dim=1280,
-    )
-    for name, p in vjepa.named_parameters():
-        if "patch_embed" in name:
-            continue
-        p.requires_grad = False
+    # vjepa.patch_embed = PatchEmbed3D(
+    #     patch_size=16,
+    #     tubelet_size=1,
+    #     in_chans=11,
+    #     embed_dim=1280,
+    # )
+    # for name, p in vjepa.named_parameters():
+    #     if "patch_embed" in name:
+    #         continue
+    #     p.requires_grad = False
     vjepa = vjepa.to(device)
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
@@ -308,7 +308,7 @@ def main(args, resume_preempt=False):
     model = ModelWrapperV2(
         vjepa=vjepa,
         patch_size=16,
-        dim_out=1280,
+        dim_out=1024,
         num_heads=16,
         num_decoder_layers=8,
         num_target_channels=16,
