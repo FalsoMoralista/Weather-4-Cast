@@ -46,9 +46,24 @@ from torchvision import transforms
 
 
 def make_transforms():
-    return transforms.Compose(
-        [transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
-    )
+    def permute(x):
+        return x.permute(1, 0, 2, 3)
+
+    def composed():
+        return transforms.Compose(
+            [
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
+
+    def transform(x):
+        t = composed()
+        x = t(x)
+        return permute(x)
+    
+    return transform
 
 
 # --
