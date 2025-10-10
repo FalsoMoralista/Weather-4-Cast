@@ -50,7 +50,7 @@ from utils.checkpoint import remove_prefix
 from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
 
 from src.models.utils.patch_embed import PatchEmbed3D
-from src.models.vision_transformer import VisionTransformer
+from src.models.vision_transformer import VisionTransformer, vit_giant
 from src.utils.wrappers import MultiSeqWrapper
 
 # from src.transforms import make_transforms
@@ -249,19 +249,19 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    vjepa = VisionTransformer(
-        img_size=(224, 224),
-        patch_size=16,
-        mlp_ratio=4,
-        num_frames=4,
-        use_rope=True,
-        embed_dim=1024,
-        num_heads=16,
-        depth=16,
-        tubelet_size=1,
-        ignore_patches=True,
-        use_activation_checkpointing=False,
-        in_chans=11,
+    vjepa = vit_giant(
+        # patch_size=16,
+        # img_size=(224, 224),
+        # mlp_ratio=4,
+        # num_frames=4,
+        # use_rope=True,
+        # embed_dim=1024,
+        # num_heads=16,
+        # depth=16,
+        # tubelet_size=1,
+        # ignore_patches=True,
+        # use_activation_checkpointing=False,
+        # in_chans=11,
     )
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
