@@ -54,7 +54,7 @@ class VisionTransformerDecoder(nn.Module):
             img_size=(224, 224),
             patch_size=16,
             in_chans=num_target_channels,  # 16
-            embed_dim=1408,  # 1024
+            embed_dim=dim_out,  # 1024
             depth=num_layers,
             num_heads=num_heads,
             mlp_ratio=4,
@@ -68,20 +68,23 @@ class VisionTransformerDecoder(nn.Module):
         )
 
     def forward(self, x):
-        self.dim_out = 1408
+        print("Decoder input shape:", x.shape)
         B, _, _ = x.shape
         x = x.view(
             B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out
         )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
+        print("Decoder reshaped input shape:", x.shape)
         x = self.time_expansion(
             x
         )  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
+        print("After time expansion:", x.shape)
         x = self.act(x)
         x = x.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
+        print("Before decoder:", x.shape)
         x = self.vit_decoder(
             x,
             T=self.num_target_channels,
@@ -89,14 +92,18 @@ class VisionTransformerDecoder(nn.Module):
             H_patches=self.H_patches,
             W_patches=self.W_patches,
         )
+        print("After decoder:", x.shape)
         x = x.view(
             B * self.num_target_channels,
             self.dim_out,
             self.vjepa_size_in,
             self.vjepa_size_in,
         )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
+        print("Before conv regression:", x.shape)
         x = self.conv_regression(x)
+        print("After conv regression:", x.shape)
         x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
+        print("Final output shape:", x.shape)
         return x
 
 
@@ -115,12 +122,14 @@ class ModelWrapperV2(nn.Module):
     ):
         super(ModelWrapperV2, self).__init__()
         self.vjepa = vjepa
-#        self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
+        # self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
         self.num_target_channels = num_target_channels
         self.vjepa_size_in = vjepa_size_in
         self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
+
+        image_size = 224
 
         self.vit_decoder = VisionTransformerDecoder(
             T=num_frames,
@@ -128,23 +137,24 @@ class ModelWrapperV2(nn.Module):
             dim_out=dim_out,
             num_layers=num_decoder_layers,
             num_heads=num_heads,
-            H_patches=224 // patch_size,
-            W_patches=224 // self.patch_size,
+            H_patches=image_size // self.patch_size,
+            W_patches=image_size // self.patch_size,
             num_target_channels=num_target_channels,
         )
 
         # DinoV3 SAT normalization config
         # https://huggingface.co/facebook/dinov3-vit7b16-pretrain-sat493m/resolve/main/preprocessor_config.json
-#        self.normalize = T.Normalize(
-#            mean=[0.430, 0.411, 0.296],
-#            std=[0.213, 0.156, 0.143],
-#        )
+
+        # self.normalize = T.Normalize(
+        #     mean=[0.430, 0.411, 0.296],
+        #     std=[0.213, 0.156, 0.143],
+        # )
 
     def forward(self, x):
         B, C, T, H, W = x.shape  # (B, T=4, 11, 252, 252)
         # x = x.view(B * T, C, H, W)  # [B * T, 11, 252, 252]
         # x = self.downsample(x)
-#        x = self.normalize(x)
+        # x = self.normalize(x)
 
         # with torch.inference_mode():
         #     features = self.backbone.forward_features(x)
@@ -157,7 +167,6 @@ class ModelWrapperV2(nn.Module):
         vjepa_out = self.vjepa(
             x=x,
             tokenize=True,
- #           tokenize=False,
             T=T,
             H_patches=H_patches,
             W_patches=W_patches,
