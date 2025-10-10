@@ -58,8 +58,8 @@ def composed():
 
 
 def transform_inner(x):
-    t = composed()
-    x = t(x)
+    # t = composed()
+    # x = t(x)
     return permute(x)
 
 
@@ -255,11 +255,11 @@ def main(args, resume_preempt=False):
         num_frames=4,
         use_rope=True,
         # embed_dim=1024,
-        # num_heads=16,
-        # depth=16,
+        num_heads=16,
+        depth=16,
         tubelet_size=1,
         # ignore_patches=True,
-        # use_activation_checkpointing=False,
+        use_activation_checkpointing=False,
         in_chans=11,
     )
     vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitg.pt")
