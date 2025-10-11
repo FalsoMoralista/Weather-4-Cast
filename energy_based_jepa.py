@@ -528,8 +528,8 @@ def main(args, resume_preempt=False):
         vtime = gpu_timer(evaluate)
 
         model.train(True)
-        model.backbone.eval()
-        model.backbone.requires_grad_(False)
+        # model.backbone.eval()
+        # model.backbone.requires_grad_(False)
 
         if epoch + 1 == 1:
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
