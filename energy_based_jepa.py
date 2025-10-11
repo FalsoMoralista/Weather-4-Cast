@@ -231,7 +231,7 @@ def main(args, resume_preempt=False):
     )
 
     val_dataset, supervised_loader_val, supervised_sampler_val = make_sat_dataset(
-        transform=None,
+        transform=video_transform,
         batch_size=batch_size,  # TODO: double it up
         collator=None,
         pin_mem=True,
