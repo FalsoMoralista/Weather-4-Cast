@@ -48,8 +48,9 @@ else:
     torch.cuda.set_device(device)
 
 # Load checkpoint
+tag = "vjepa2"
 epoch_to_load = 5
-model_path = f"./jepa_checkpoints/{epoch_to_load}.pth.tar"
+model_path = "./jepa_checkpoints/" + f"{tag}" + f"-ep{epoch_to_load}.pth.tar"
 
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 logger.info(f"Loaded checkpoint from {model_path} at epoch {epoch_to_load}")
