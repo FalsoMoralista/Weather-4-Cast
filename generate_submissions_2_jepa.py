@@ -17,7 +17,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
     for year in years:
         predictions_path = os.path.join(
-            predictions_dir, f"vjepa2_predictions_{task}test{year}.pth"
+            predictions_dir, f"predictions_vjepa2_{task}test{year}.pth"
         )
         try:
             predictions_data = torch.load(predictions_path)

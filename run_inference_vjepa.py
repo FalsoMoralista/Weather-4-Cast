@@ -50,7 +50,7 @@ else:
 # Load checkpoint
 tag = "vjepa2"
 epoch_to_load = 5
-model_path = "./jepa_checkpoints/" + f"{tag}" + f"-ep{epoch_to_load}.pth.tar"
+model_path = "./logs/" + f"{tag}" + f"-ep{epoch_to_load}.pth.tar"
 
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
 logger.info(f"Loaded checkpoint from {model_path} at epoch {epoch_to_load}")
@@ -78,7 +78,8 @@ model = ModelWrapperV2(
     num_frames=4,
 )
 
-model = model.load_state_dict(model_checkpoint)
+msg = model.load_state_dict(model_checkpoint)
+print("Loading model state dict", msg)
 model = model.to(device)
 model.eval()
 
@@ -86,12 +87,14 @@ task = "cum1"  # TODO colocar em .yaml
 years = ["19", "20"]
 filenames = ["roxi_0008", "roxi_0009", "roxi_0010"]
 
+transform = make_transforms()
+
 for year in years:
     predictions = {}
     for name in filenames:
         print("Year:", year)
         type = name + "." + task + "test" + year
-        dataset = InferenceDataset(InferenceDataset.ROOT, type=type)
+        dataset = InferenceDataset(InferenceDataset.ROOT, type=type, transform=transform)
 
         dist_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset=dataset,
