@@ -128,6 +128,8 @@ for year in years:
             print(f"Predictions shape {predictions[type].size()}")
 
         evaluate()
-    torch.save(predictions, "predictions_{}.pth".format(task + "test" + year))
+    torch.save(
+        predictions, "predictions_{}.pth".format("vjepa2_" + task + "test" + year)
+    )
     print("Predictions:", predictions)
     print("Predictions length:", len(predictions))
