@@ -32,7 +32,7 @@ def make_inference_dataset(
     rank=0,
     root_path=None,
     image_folder=None,
-    type='cum1test19',
+    type="cum1test19",
     copy_data=False,
     drop_last=False,
 ):
@@ -89,7 +89,7 @@ class InferenceDataset(Dataset):
         self.paths = [root / str(year) for year in self.years]
         hrit_path = [p / "HRIT" for p in self.paths]
         self.hrit_path = self._sort_files_by_name(hrit_path)
-        
+
         self.type = type
         self.hrit_index = self._build_index(type)
 
@@ -103,7 +103,7 @@ class InferenceDataset(Dataset):
 
     def _get_hrit_files_by_type(self, type: str):
         files = []
-        
+
         for p in self.hrit_path:
             files.extend(p.glob("*{}*".format(self.type)))
         return sorted(files, key=lambda x: x.name)
@@ -113,24 +113,15 @@ class InferenceDataset(Dataset):
         files = self._get_hrit_files_by_type(type)
         for f in files:
             with h5py.File(f, "r", swmr=True) as file:
-                size += (
-                    file[self.HRIT_KEY].shape[0]
-                    - self.HRIT_WINDOW_SIZE
-                    + 1
-                )
+                size += file[self.HRIT_KEY].shape[0] - self.HRIT_WINDOW_SIZE + 1
         return size
 
     def __len__(self):
         return self._get_hrit_size(self.type)
 
-
     def _get_image_count(self, path: Path):
         with h5py.File(path, "r", swmr=True) as file:
-            return (
-                file[self.HRIT_KEY].shape[0]
-                - self.HRIT_WINDOW_SIZE
-                + 1
-            )
+            return file[self.HRIT_KEY].shape[0] - self.HRIT_WINDOW_SIZE + 1
 
     def _build_index(self, type: str):
         files = self._get_hrit_files_by_type(type)
@@ -150,16 +141,16 @@ class InferenceDataset(Dataset):
                 input_start = idx - start
                 input_end = input_start + self.HRIT_WINDOW_SIZE
                 input = hrit[self.HRIT_KEY][input_start:input_end]
- 
-                if self.transform:
-                    input = self.transform(input)
 
                 input = F.interpolate(
                     tensor(input),
                     size=self.input_size,
                     mode="bicubic",
                 )
-                
+
+                if self.transform:
+                    input = self.transform(input)
+
                 return input
 
 
@@ -194,12 +185,10 @@ if __name__ == "__main__":
     )
 
     print(f"Loader length: {len(loader)} - Batch size: {loader.batch_size}")
-    print(f'INdex {dataset.hrit_index}')
+    print(f"INdex {dataset.hrit_index}")
 
     for i, data in enumerate(loader):
         input = data
-        print(f'input: {input.size()}',flush=True)
-        #logger.info(input.size())
-        logger.info(
-            f"Batch {i} - Input shape: {input.shape}"
-        )
+        print(f"input: {input.size()}", flush=True)
+        # logger.info(input.size())
+        logger.info(f"Batch {i} - Input shape: {input.shape}")
