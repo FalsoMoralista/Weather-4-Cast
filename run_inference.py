@@ -30,7 +30,7 @@ dinov3 = torch.hub.load(
 ).to(device)
 dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
-for epoch in range(2, 3, 1):
+for epoch in range(22, 23, 1):
 
     vjepa = VisionTransformer(
         img_size=(224, 224),

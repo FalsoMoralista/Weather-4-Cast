@@ -115,15 +115,11 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
                 # --- END: REVISED LOGIC ---
 
-                submission_results.append({
-                    'Case-id': row['Case-id'],
-                    'Prediction': prediction_value,
-                    'Hour': 1 
-                })
+                submission_results.append([row['Case-id'], prediction_value, 1])
 
-            output_df = pd.DataFrame(submission_results)
+            output_df = pd.DataFrame(submission_results, columns=None)
             output_filename = os.path.join(output_dir, f'20{year}/{name}.test.cum4h.csv')
-            output_df.to_csv(output_filename, index=False)
+            output_df.to_csv(output_filename, index=False, header=False)
             print(f"Successfully generated submission file: {output_filename}")
 
 
