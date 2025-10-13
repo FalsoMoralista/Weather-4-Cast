@@ -103,11 +103,30 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
                 print("Prediction patch shape:", prediction_patch.shape)
 
-                mean = torch.mean(prediction_patch, dim=(1, 2))
-                print("Mean shape:", mean.shape)
+                first_hour_mean = torch.mean(prediction_patch[:4], dim=(0, 1))
+                print("First hour mean shape:", first_hour_mean.shape)
 
-                total_rain = torch.sum(mean).item()
+                second_hour_mean = torch.mean(prediction_patch[4:8], dim=(0, 1))
+                print("Second hour mean shape:", second_hour_mean.shape)
+
+                third_hour_mean = torch.mean(prediction_patch[8:12], dim=(0, 1))
+                print("Third hour mean shape:", third_hour_mean.shape)
+
+                fourth_hour_mean = torch.mean(prediction_patch[12:16], dim=(0, 1))
+                print("Fourth hour mean shape:", fourth_hour_mean.shape)
+
+                total_rain = torch.sum(
+                    first_hour_mean
+                    + second_hour_mean
+                    + third_hour_mean
+                    + fourth_hour_mean
+                ).item()
                 print("Total rain:", total_rain)
+
+                # mean = torch.mean(prediction_patch, dim=(1, 2))
+                # print("Mean shape:", mean.shape)
+
+                # total_rain = torch.sum(mean).item()
 
                 # # 4. Create a weight matrix to store the overlap area for each LR pixel
                 # patch_h, patch_w = prediction_patch.shape[2], prediction_patch.shape[3]
