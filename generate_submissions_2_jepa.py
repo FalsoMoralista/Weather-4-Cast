@@ -165,7 +165,15 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                     print("Total rain:", total_rain)
                     return total_rain
 
-                total_rain = predict_global(prediction_patch)
+                def predict_simple(pred_tensor):
+                    global_mean = torch.mean(prediction_patch, dim=0)
+                    print("Global mean shape:", global_mean.shape)  # 16, 252, 252
+                    local_mean = torch.mean(global_mean, dim=(1, 2))
+                    print("Local mean shape:", local_mean.shape)  # 16
+                    total_rain = torch.mean(local_mean)  # Scalar
+                    return total_rain.item() * 4
+
+                total_rain = predict_simple(prediction_patch)
 
                 # mean = torch.mean(prediction_patch, dim=(1, 2))
                 # print("Mean shape:", mean.shape)
