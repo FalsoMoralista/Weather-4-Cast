@@ -114,7 +114,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 # 3. An 'output' directory will be created for the results.
 
 # Assuming the script is in the same folder as these directories
-PREDICTIONS_DIR = '.' # Directory with your .pth files
+PREDICTIONS_DIR = 'predictions' # Directory with your .pth files
 DICTIONARY_DIR = 'submissions'  # Directory with your roxi_..._dictionary.csv files
 OUTPUT_DIR = 'submission_files'      # Where to save the final .csv files
 
