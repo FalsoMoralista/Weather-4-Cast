@@ -49,7 +49,7 @@ else:
 
 # Load checkpoint
 tag = "vjepa2"
-epoch_to_load = 5
+epoch_to_load = 15
 model_path = "./logs/" + f"{tag}" + f"-ep{epoch_to_load}.pth.tar"
 
 checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
