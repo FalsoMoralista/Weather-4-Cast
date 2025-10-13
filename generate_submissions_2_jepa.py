@@ -108,15 +108,17 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 print("Prediction patch shape:", prediction_patch.shape)
 
                 global_mean = torch.mean(prediction_patch, dim=0)
-                print("Global mean shape:", global_mean.shape)
+                print("Global mean shape:", global_mean.shape)  # 1, 16, 252, 252
 
                 spatial_dim = (2, 3)
 
                 first_hour_mean_over_area = torch.mean(
                     global_mean[:4, :], dim=spatial_dim
-                )
+                )  # 1, 4, 1
                 print("First hour mean shape:", first_hour_mean_over_area.shape)
-                first_hour_mean = torch.mean(first_hour_mean_over_area, dim=1)
+                first_hour_mean = torch.mean(
+                    first_hour_mean_over_area, dim=1
+                )  # 1, 1, 1
                 print("First hour mean shape:", first_hour_mean.shape)
 
                 second_hour_mean_over_area = torch.mean(
@@ -147,7 +149,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                         third_hour_mean,
                         fourth_hour_mean,
                     ]
-                )
+                )  # 4, 1, 1
                 print("Rain mean stack shape:", rain_mean.shape)
 
                 total_rain = torch.sum(rain_mean)
