@@ -136,15 +136,39 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 # 5. Calculate the weighted sum and normalize
                 # The total area of the ROI is (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start), which is 32*32=1024
                 total_roi_area = (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start)
+                
+                # --- START: MODIFIED LOGIC ---
+                # Loop through the 4 hours, averaging each one and summing the results.
+                total_value = 0.0
+                num_frames_per_hour = 4
+                for hour_index in range(4):
+                    start_frame = hour_index * num_frames_per_hour
+                    end_frame = start_frame + num_frames_per_hour
 
+                    # Isolate the 4 frames for the current hour
+                    hourly_prediction_patch = prediction_patch[start_frame:end_frame]
+
+                    # Get the weighted sum for this hour's frames
+                    hourly_weighted_sum = torch.sum(hourly_prediction_patch * weight_matrix)
+
+                    # Calculate the average over the ROI area AND the 4 time slots
+                    hourly_average = hourly_weighted_sum / (total_roi_area * num_frames_per_hour)
+                    
+                    # Add this hour's average to the total
+                    total_value += hourly_average
+
+                prediction_value = total_value.item()
+                # --- END: MODIFIED LOGIC ---
+                
+                #########################################################################
                 # Multiply the prediction patch by the weights and sum everything up
                 # weight_matrix is (H, W), prediction_patch is (16, H, W). Broadcasting handles this.
-                weighted_sum = torch.sum(prediction_patch * weight_matrix)
-
+                #weighted_sum = torch.sum(prediction_patch * weight_matrix)
+            
                 # The final value is the weighted average. We divide by the total area of all frames.
-                prediction_value = (weighted_sum / (total_roi_area * 16)).item()
+                #prediction_value = (weighted_sum / total_roi_area).item()
 
-                # --- END: REVISED LOGIC ---
+                #########################################################################
 
                 submission_results.append([row["Case-id"], prediction_value, 1])
 

@@ -103,16 +103,16 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
                 print("Prediction patch shape:", prediction_patch.shape)
 
-                first_hour_mean = torch.mean(prediction_patch[:4], dim=(0, 1))
+                first_hour_mean = torch.mean(prediction_patch[:,:4,:], dim=(0, 1))
                 print("First hour mean shape:", first_hour_mean.shape)
 
-                second_hour_mean = torch.mean(prediction_patch[4:8], dim=(0, 1))
+                second_hour_mean = torch.mean(prediction_patch[:,4:8,:], dim=(0, 1))
                 print("Second hour mean shape:", second_hour_mean.shape)
 
-                third_hour_mean = torch.mean(prediction_patch[8:12], dim=(0, 1))
+                third_hour_mean = torch.mean(prediction_patch[:,8:12,:], dim=(0, 1))
                 print("Third hour mean shape:", third_hour_mean.shape)
 
-                fourth_hour_mean = torch.mean(prediction_patch[12:16], dim=(0, 1))
+                fourth_hour_mean = torch.mean(prediction_patch[:,12:16,:], dim=(0, 1))
                 print("Fourth hour mean shape:", fourth_hour_mean.shape)
 
                 total_rain = torch.sum(
