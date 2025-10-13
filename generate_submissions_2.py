@@ -181,7 +181,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
 
 # --- How to Use ---
-PREDICTIONS_DIR = "."
+PREDICTIONS_DIR = "predictions"
 DICTIONARY_DIR = "submissions"
 OUTPUT_DIR = "submission_files"
 

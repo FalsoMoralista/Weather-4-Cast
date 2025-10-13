@@ -139,7 +139,7 @@ for epoch in range(22, 23, 1):
                 predictions[type] = torch.cat(predictions[type], dim=0)
                 print(f'Predictions shape {predictions[type].size()}')    
             evaluate()
-        torch.save(predictions, 'predictions_{}.pth'.format(task+'test'+year))
+        torch.save(predictions, 'predictions/predictions_{}.pth'.format(task+'test'+year))
         print('Predictions:', predictions)
         print('Predictions length:', len(predictions))
         

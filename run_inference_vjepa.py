@@ -132,7 +132,7 @@ for year in years:
 
         evaluate()
     torch.save(
-        predictions, "predictions_{}.pth".format("vjepa2_" + task + "test" + year)
+        predictions, "predictions/predictions_{}.pth".format("vjepa2_" + task + "test" + year)
     )
     print("Predictions:", predictions)
     print("Predictions length:", len(predictions))
