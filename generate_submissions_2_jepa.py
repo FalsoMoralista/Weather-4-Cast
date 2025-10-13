@@ -107,24 +107,32 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
                 print("Prediction patch shape:", prediction_patch.shape)
 
-                dim = (2, 3)
+                spatial_dim = (2, 3)
 
-                first_hour_mean = torch.mean(prediction_patch[:, :4, :], dim=dim)
+                first_hour_mean = torch.mean(
+                    prediction_patch[:, :4, :], dim=spatial_dim
+                )
                 print("First hour mean shape:", first_hour_mean.shape)
                 first_hour_mean = torch.mean(first_hour_mean, dim=1)
                 print("First hour mean shape:", first_hour_mean.shape)
 
-                second_hour_mean = torch.mean(prediction_patch[:, 4:8, :], dim=dim)
+                second_hour_mean = torch.mean(
+                    prediction_patch[:, 4:8, :], dim=spatial_dim
+                )
                 print("Second hour mean shape:", second_hour_mean.shape)
                 second_hour_mean = torch.mean(second_hour_mean, dim=1)
                 print("Second hour mean shape:", second_hour_mean.shape)
 
-                third_hour_mean = torch.mean(prediction_patch[:, 8:12, :], dim=dim)
+                third_hour_mean = torch.mean(
+                    prediction_patch[:, 8:12, :], dim=spatial_dim
+                )
                 print("Third hour mean shape:", third_hour_mean.shape)
                 third_hour_mean = torch.mean(third_hour_mean, dim=1)
                 print("Third hour mean shape:", third_hour_mean.shape)
 
-                fourth_hour_mean = torch.mean(prediction_patch[:, 12:16, :], dim=dim)
+                fourth_hour_mean = torch.mean(
+                    prediction_patch[:, 12:16, :], dim=spatial_dim
+                )
                 print("Fourth hour mean shape:", fourth_hour_mean.shape)
                 fourth_hour_mean = torch.mean(fourth_hour_mean, dim=1)
                 print("Fourth hour mean shape:", fourth_hour_mean.shape)
