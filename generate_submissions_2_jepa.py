@@ -108,7 +108,6 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 print("Prediction patch shape:", prediction_patch.shape)
 
                 def predict_over_hours(pred_tensor):
-
                     global_mean = torch.mean(prediction_patch, dim=0)
                     print("Global mean shape:", global_mean.shape)  # 16, 252, 252
 
@@ -158,6 +157,15 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                     print("Total rain:", total_rain)
 
                     return total_rain
+
+                def predict_global(pred_tensor):
+                    spatial_average = torch.mean(prediction_patch, dim=(2, 3))
+                    print("Spatial average shape:", spatial_average.shape)  # (16, )
+                    total_rain = torch.sum(spatial_average).item()
+                    print("Total rain:", total_rain)
+                    return total_rain
+
+                total_rain = predict_global(prediction_patch)
 
                 # mean = torch.mean(prediction_patch, dim=(1, 2))
                 # print("Mean shape:", mean.shape)
