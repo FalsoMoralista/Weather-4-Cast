@@ -38,7 +38,10 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 continue
 
             full_predictions_tensor = predictions_data[prediction_key]
-            print("Predictions shape for key: {prediction_key}", full_predictions_tensor.shape)
+            print(
+                "Predictions shape for key: {prediction_key}",
+                full_predictions_tensor.shape,
+            )
 
             dict_path = os.path.join(
                 dictionary_dir, f"{name}.{task}test_dictionary.csv"
@@ -106,27 +109,34 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
                 dim = (2, 3)
 
-                first_hour_mean = torch.mean(prediction_patch[:,:4,:], dim=dim)
+                first_hour_mean = torch.mean(prediction_patch[:, :4, :], dim=dim)
                 print("First hour mean shape:", first_hour_mean.shape)
                 first_hour_mean = torch.mean(first_hour_mean, dim=1)
                 print("First hour mean shape:", first_hour_mean.shape)
 
-                second_hour_mean = torch.mean(prediction_patch[:,4:8,:], dim=dim)
+                second_hour_mean = torch.mean(prediction_patch[:, 4:8, :], dim=dim)
                 print("Second hour mean shape:", second_hour_mean.shape)
                 second_hour_mean = torch.mean(second_hour_mean, dim=1)
                 print("Second hour mean shape:", second_hour_mean.shape)
 
-                third_hour_mean = torch.mean(prediction_patch[:,8:12,:], dim=dim)
+                third_hour_mean = torch.mean(prediction_patch[:, 8:12, :], dim=dim)
                 print("Third hour mean shape:", third_hour_mean.shape)
                 third_hour_mean = torch.mean(third_hour_mean, dim=1)
                 print("Third hour mean shape:", third_hour_mean.shape)
 
-                fourth_hour_mean = torch.mean(prediction_patch[:,12:16,:], dim=dim)
+                fourth_hour_mean = torch.mean(prediction_patch[:, 12:16, :], dim=dim)
                 print("Fourth hour mean shape:", fourth_hour_mean.shape)
                 fourth_hour_mean = torch.mean(fourth_hour_mean, dim=1)
                 print("Fourth hour mean shape:", fourth_hour_mean.shape)
 
-                rain_mean = torch.stack([first_hour_mean, second_hour_mean, third_hour_mean, fourth_hour_mean])
+                rain_mean = torch.stack(
+                    [
+                        first_hour_mean,
+                        second_hour_mean,
+                        third_hour_mean,
+                        fourth_hour_mean,
+                    ]
+                )
                 print("Rain mean stack shape:", rain_mean.shape)
 
                 total_rain = torch.sum(rain_mean)
