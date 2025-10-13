@@ -100,53 +100,61 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                     lr_y_start_idx : lr_y_end_idx + 1,
                     lr_x_start_idx : lr_x_end_idx + 1,
                 ]
-                # print('prediction_patch', prediction_patch.size())
-                # 4. Create a weight matrix to store the overlap area for each LR pixel
-                patch_h, patch_w = prediction_patch.shape[2], prediction_patch.shape[3]
-                weight_matrix = torch.zeros(
-                    (patch_h, patch_w), device=prediction_patch.device
-                )
 
-                for y_idx in range(patch_h):
-                    for x_idx in range(patch_w):
-                        # Global LR coordinates
-                        global_lr_y = lr_y_start_idx + y_idx
-                        global_lr_x = lr_x_start_idx + x_idx
+                print("Prediction patch shape:", prediction_patch.shape)
 
-                        # Corresponding HR coordinates for this LR pixel's 6x6 block
-                        pixel_hr_y_start = global_lr_y * 6
-                        pixel_hr_y_end = pixel_hr_y_start + 6
-                        pixel_hr_x_start = global_lr_x * 6
-                        pixel_hr_x_end = pixel_hr_x_start + 6
+                mean = torch.mean(prediction_patch, dim=(1, 2))
+                print("Mean shape:", mean.shape)
 
-                        # Calculate the intersection area with the 32x32 ROI
-                        overlap_y = max(
-                            0,
-                            min(hr_y_end, pixel_hr_y_end)
-                            - max(hr_y_start, pixel_hr_y_start),
-                        )
-                        overlap_x = max(
-                            0,
-                            min(hr_x_end, pixel_hr_x_end)
-                            - max(hr_x_start, pixel_hr_x_start),
-                        )
+                total_rain = torch.sum(mean).item()
+                print("Total rain:", total_rain)
 
-                        weight_matrix[y_idx, x_idx] = overlap_y * overlap_x
+                # # 4. Create a weight matrix to store the overlap area for each LR pixel
+                # patch_h, patch_w = prediction_patch.shape[2], prediction_patch.shape[3]
+                # weight_matrix = torch.zeros(
+                #     (patch_h, patch_w), device=prediction_patch.device
+                # )
 
-                # 5. Calculate the weighted sum and normalize
-                # The total area of the ROI is (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start), which is 32*32=1024
-                total_roi_area = (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start)
+                # for y_idx in range(patch_h):
+                #     for x_idx in range(patch_w):
+                #         # Global LR coordinates
+                #         global_lr_y = lr_y_start_idx + y_idx
+                #         global_lr_x = lr_x_start_idx + x_idx
 
-                # Multiply the prediction patch by the weights and sum everything up
-                # weight_matrix is (H, W), prediction_patch is (16, H, W). Broadcasting handles this.
-                weighted_sum = torch.sum(prediction_patch * weight_matrix)
+                #         # Corresponding HR coordinates for this LR pixel's 6x6 block
+                #         pixel_hr_y_start = global_lr_y * 6
+                #         pixel_hr_y_end = pixel_hr_y_start + 6
+                #         pixel_hr_x_start = global_lr_x * 6
+                #         pixel_hr_x_end = pixel_hr_x_start + 6
 
-                # The final value is the weighted average. We divide by the total area of all frames.
-                prediction_value = (weighted_sum / (total_roi_area * 16)).item()
+                #         # Calculate the intersection area with the 32x32 ROI
+                #         overlap_y = max(
+                #             0,
+                #             min(hr_y_end, pixel_hr_y_end)
+                #             - max(hr_y_start, pixel_hr_y_start),
+                #         )
+                #         overlap_x = max(
+                #             0,
+                #             min(hr_x_end, pixel_hr_x_end)
+                #             - max(hr_x_start, pixel_hr_x_start),
+                #         )
+
+                #         weight_matrix[y_idx, x_idx] = overlap_y * overlap_x
+
+                # # 5. Calculate the weighted sum and normalize
+                # # The total area of the ROI is (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start), which is 32*32=1024
+                # total_roi_area = (hr_y_end - hr_y_start) * (hr_x_end - hr_x_start)
+
+                # # Multiply the prediction patch by the weights and sum everything up
+                # # weight_matrix is (H, W), prediction_patch is (16, H, W). Broadcasting handles this.
+                # weighted_sum = torch.sum(prediction_patch * weight_matrix)
+
+                # # The final value is the weighted average. We divide by the total area of all frames.
+                # prediction_value = (weighted_sum / (total_roi_area * 16)).item()
 
                 # --- END: REVISED LOGIC ---
 
-                submission_results.append([row["Case-id"], prediction_value, 1])
+                submission_results.append([row["Case-id"], total_rain, 1])
 
             output_df = pd.DataFrame(submission_results, columns=None)
             output_filename = os.path.join(
