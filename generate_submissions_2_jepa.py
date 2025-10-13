@@ -39,7 +39,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
             full_predictions_tensor = predictions_data[prediction_key]
             print(
-                "Predictions shape for key: {prediction_key}",
+                f"Predictions shape for key: {prediction_key}",
                 full_predictions_tensor.shape,
             )
 
