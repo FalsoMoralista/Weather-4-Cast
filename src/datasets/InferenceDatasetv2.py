@@ -2,6 +2,7 @@ from pathlib import Path
 from logging import getLogger
 
 import torch
+import torch.nn.functional as F
 from torch import tensor
 from torch.utils.data import Dataset, DataLoader
 
@@ -45,8 +46,6 @@ class InferenceDatasetV2(Dataset):
         self.length = self.data["REFL-BT"].shape[0]
         self.num_slices = self.length / 4
 
-        print(self.file.absolute())
-
     def __len__(self):
         return int(self.num_slices)
 
@@ -57,10 +56,16 @@ class InferenceDatasetV2(Dataset):
         refl_bt = self.data["REFL-BT"][start_idx:end_idx, :, :]
         refl_bt = tensor(refl_bt, dtype=torch.float32)
 
-        if self.transform:
-            refl_bt = self.transform(refl_bt)
+        input = F.interpolate(
+            refl_bt,
+            size=self.input_size,
+            mode="bicubic",
+        )
 
-        return refl_bt
+        if self.transform:
+            input = self.transform(input)
+
+        return input
 
 
 if __name__ == "__main__":
