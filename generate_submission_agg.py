@@ -109,16 +109,17 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir, model
                 # 2. Find the corresponding range of low-resolution (LR) pixels
                 # These are the pixels we need to consider from the 252x252 grid
                 lr_y_start_idx = hr_y_start // 6
-                lr_y_end_idx = (hr_y_end - 1) // 6
+                lr_y_end_idx = hr_y_end // 6
                 lr_x_start_idx = hr_x_start // 6
-                lr_x_end_idx = (hr_x_end - 1) // 6
+                lr_x_end_idx = hr_x_end // 6
+
+                H, W = sample_tensor.shape[1], sample_tensor.shape[2]
+
+                y1, y2 = max(0, lr_y_start_idx), min(H, lr_y_end_idx)
+                x1, x2 = max(0, lr_x_start_idx), min(W, lr_x_end_idx)
 
                 # 3. Extract the relevant patch from the prediction tensor
-                prediction_patch = sample_tensor[
-                    :,
-                    lr_y_start_idx : lr_y_end_idx + 1,
-                    lr_x_start_idx : lr_x_end_idx + 1,
-                ]
+                prediction_patch = sample_tensor[:, y1:y2, x1:x2]
 
                 print("Prediction patch shape:", prediction_patch.shape)
 
@@ -128,6 +129,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir, model
                     return mean.item() * 4
 
                 total_rain = predict_simple(prediction_patch)
+                total_rain = max(0, total_rain)  # Ensure non-negative
 
                 submission_results.append([row["Case-id"], total_rain, 1])
 
