@@ -32,6 +32,7 @@ vicreg:
 logging:
   folder: /home/rtcalumby/adam/luciano/vanilla-vjepa_mse
   write_tag: vjepa2
+  checkpoint_freq: 5
 mask:
   allow_overlap: false
   aspect_ratio:
