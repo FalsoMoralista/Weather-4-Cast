@@ -161,6 +161,16 @@ def main(args, resume_preempt=False):
     final_lr = args["optimization"]["final_lr"]
     smoothing = args["optimization"]["label_smoothing"]
 
+    loss_fn = args["optimization"]["loss_function"]
+
+    loss_fn_map = {
+        "mse": F.mse_loss,
+        "l1": F.l1_loss,
+        "smooth_l1": F.smooth_l1_loss,
+    }
+
+    loss_function = loss_fn_map.get(loss_fn, loss_fn_map["smooth_l1"])
+
     # -- LOGGING
     folder = args["logging"]["folder"]
     tag = args["logging"]["write_tag"]
@@ -415,7 +425,8 @@ def main(args, resume_preempt=False):
                 ):
                     vjepa_embeddings = model(x)
 
-                loss = F.smooth_l1_loss(vjepa_embeddings, y)
+                loss = loss_function(vjepa_embeddings, y)
+                # loss = F.smooth_l1_loss(vjepa_embeddings, y)
 
                 loss_val = loss.item()
 
