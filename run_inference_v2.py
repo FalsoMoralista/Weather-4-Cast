@@ -222,10 +222,9 @@ for year in years:
                     with torch.inference_mode():
                         reconstructed_matrix = model(images).squeeze(2)
                         if type not in predictions:
-                            predictions[type] = {}
-                        i = (idx * 4, idx * 4 + 4)
-                        predictions[type][i] = reconstructed_matrix
-            # predictions[type] = torch.cat(predictions[type], dim=0)
+                            predictions[type] = []
+                        predictions[type].append(reconstructed_matrix)
+            predictions[type] = torch.cat(predictions[type], dim=0)
             # print(f"Predictions shape {predictions[type].size()}")
             print(f"Number of prediction for type: {len(predictions[type])}")
 
