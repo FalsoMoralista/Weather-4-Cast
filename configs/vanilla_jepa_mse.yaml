@@ -10,11 +10,11 @@ data:
   nb_classes: 1081
   cutmix: 0.0 #1.0
   reprob: 0.25
-  image_folder: /home/rtcalumby/adam/luciano/vanilla-vjepa_mse
+  image_folder: /home/rtcalumby/adam/luciano/vanilla-vjepa-mse
   num_workers: 8
   pin_mem: true
-  root_path: /home/rtcalumby/adam/luciano/vanilla-vjepa_mse
-  cache_path: ./cache/vanilla-vjepa_mse
+  root_path: /home/rtcalumby/adam/luciano/vanilla-vjepa-mse
+  cache_path: ./cache/vanilla-vjepa-mse
   use_color_distortion: false
   use_gaussian_blur: false
   use_horizontal_flip: false
@@ -30,7 +30,7 @@ vicreg:
   beta: 0.0
   gamma: 0.0
 logging:
-  folder: /home/rtcalumby/adam/luciano/vanilla-vjepa_mse
+  folder: /home/rtcalumby/adam/luciano/vanilla-vjepa-mse
   write_tag: vjepa2
   checkpoint_freq: 5
 mask:
