@@ -163,6 +163,8 @@ def main(args, resume_preempt=False):
 
     loss_fn = args["optimization"]["loss_function"]
 
+    logger.info("Configured loss function: %s" % loss_fn)
+
     loss_fn_map = {
         "mse": F.mse_loss,
         "l1": F.l1_loss,
@@ -170,6 +172,7 @@ def main(args, resume_preempt=False):
     }
 
     loss_function = loss_fn_map.get(loss_fn, loss_fn_map["smooth_l1"])
+    logger.info("Using loss function: %s" % loss_function)
 
     # -- LOGGING
     folder = args["logging"]["folder"]
