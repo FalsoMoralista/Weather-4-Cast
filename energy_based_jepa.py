@@ -432,7 +432,7 @@ def main(args, resume_preempt=False):
                     enabled=use_bfloat16,
                 ):
                     vjepa_embeddings = model(x)
-                loss = loss_function(vjepa_embeddings, y)
+                    loss = loss_function(vjepa_embeddings, y)
                 # loss = F.smooth_l1_loss(vjepa_embeddings, y)
 
                 loss_val = loss.item()
