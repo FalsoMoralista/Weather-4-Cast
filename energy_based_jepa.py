@@ -70,7 +70,6 @@ def make_transforms():
 # --
 log_timings = True
 log_freq = 128
-checkpoint_freq = 1
 # --
 
 _GLOBAL_SEED = 0
@@ -177,6 +176,7 @@ def main(args, resume_preempt=False):
     # -- LOGGING
     folder = args["logging"]["folder"]
     tag = args["logging"]["write_tag"]
+    checkpoint_freq = args["logging"]["checkpoint_freq"]
 
     dump = os.path.join(folder, "params-vjepa.yaml")
     with open(dump, "w") as f:
