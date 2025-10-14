@@ -68,5 +68,6 @@ optimization:
   warmup: 10
   weight_decay: 5.0e-2 # (default: e-2)
   label_smoothing: 0.1
+  loss_function: smooth_l1  # Options: mse, l1, smooth_l1
 
 # mae lr: 0.0026. 6.5e-4 (blr)
