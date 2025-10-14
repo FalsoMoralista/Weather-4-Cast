@@ -527,13 +527,18 @@ def main(args, resume_preempt=False):
                 images = samples.to(device, non_blocking=True, dtype=torch.float32)
                 labels = targets.to(device, non_blocking=True, dtype=torch.float32)
 
-                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
+                with torch.amp.autocast(
+                    "cuda",
+                    dtype=torch.bfloat16,
+                    enabled=use_bfloat16,
+                ):
                     with torch.inference_mode():
                         reconstructed_matrix = model(images)
-
-                mae = F.smooth_l1_loss(
-                    reconstructed_matrix, labels
-                )  # MAE(reconstructed_matrix, labels)
+                    mae = loss_function(reconstructed_matrix, labels)
+                # mae = F.smooth_l1_loss(
+                #     reconstructed_matrix, labels
+                # )
+                # MAE(reconstructed_matrix, labels)
                 test_mae.update(mae)
 
             total_test_loss_meter.update(test_mae.avg)
