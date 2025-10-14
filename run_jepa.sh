@@ -14,5 +14,5 @@ YAML_FILE_NAME="$1"
 
 # Run the Python script with the specified YAML file
 python /home/lucianodourado/weather-4-cast/main_jepa.py \
-  --fname configs/"${YAML_FILE_NAME}.yaml" \
+  --fname "${YAML_FILE_NAME}.yaml" \
   --devices cuda:0 #cuda:1 cuda:2 cuda:3 cuda:4 cuda:5 cuda:6 cuda:7
