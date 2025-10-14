@@ -14,10 +14,11 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
     task = "cum1"
     years = ["19", "20"]
     filenames = ["roxi_0008", "roxi_0009", "roxi_0010"]
+    arch = 'dinepa'
 
     for year in years:
         predictions_path = os.path.join(
-            predictions_dir, f"predictions_{task}test{year}.pth"
+            predictions_dir, f"predictions_{arch}_{task}test{year}.pth"
         )
         try:
             predictions_data = torch.load(predictions_path)
@@ -76,9 +77,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 # The original code had a bug here, it should slice `file_specific_tensor`
                 slot_start, slot_end = row["slot-start"], row["slot-end"]
 
-                sample_tensor = full_predictions_tensor[
-                    slot_start:slot_end
-                ]  # Shape: (16, 252, 252)
+                sample_tensor = full_predictions_tensor[slot_start//4]  # Shape: (16, 252, 252)
 
                 # --- START: REVISED LOGIC FOR ACCURATE AVERAGING ---
 
@@ -96,13 +95,12 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                 # 3. Extract the relevant patch from the prediction tensor
                 prediction_patch = sample_tensor[
                     :,
-                    :,
                     lr_y_start_idx : lr_y_end_idx + 1,
                     lr_x_start_idx : lr_x_end_idx + 1,
                 ]
                 # print('prediction_patch', prediction_patch.size())
                 # 4. Create a weight matrix to store the overlap area for each LR pixel
-                patch_h, patch_w = prediction_patch.shape[2], prediction_patch.shape[3]
+                patch_h, patch_w = prediction_patch.shape[1], prediction_patch.shape[2]
                 weight_matrix = torch.zeros(
                     (patch_h, patch_w), device=prediction_patch.device
                 )
@@ -157,7 +155,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                     # Add this hour's average to the total
                     total_value += hourly_average
 
-                prediction_value = total_value.item()
+                prediction_value = max(0, total_value.item())
                 # --- END: MODIFIED LOGIC ---
                 
                 #########################################################################
@@ -174,7 +172,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
 
             output_df = pd.DataFrame(submission_results, columns=None)
             output_filename = os.path.join(
-                output_dir, f"20{year}/{name}.test.cum4h.csv"
+                output_dir, f"{arch}/20{year}/{name}.test.cum4h.csv"
             )
             output_df.to_csv(output_filename, index=False, header=False)
             print(f"Successfully generated submission file: {output_filename}")
