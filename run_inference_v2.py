@@ -4,8 +4,11 @@ import logging
 import numpy as np
 import sys
 
+from sys import argv
+
 from src.models.vision_transformer import VisionTransformer
-from src.models.model_wrapper import ModelWrapper, ModelWrapperV2
+from src.models.model_wrapper import ModelWrapper
+from src.models.model_v2 import ModelWrapperV2
 
 from torchvision import transforms
 from src.models.vision_transformer import vit_large_rope
@@ -162,8 +165,8 @@ models = {
     "vanilla_vjepa": load_vanilla_vjepa,
 }
 
-model_type = "dinepa"
-epoch = 20
+model_type = argv[1] if len(argv) > 1 else "dinepa"
+epoch = argv[2] if len(argv) > 2 else 20
 
 model = models[model_type](epoch).to(device)
 
@@ -171,13 +174,19 @@ task = "cum1"
 years = ["19", "20"]
 filenames = ["roxi_0008", "roxi_0009", "roxi_0010"]
 
+vjepa_transform = make_transforms()
+
 
 for year in years:
     predictions = {}
     for name in filenames:
         print("Year:", year)
         type = name + "." + task + "test" + year
-        dataset = InferenceDatasetV2(InferenceDatasetV2.ROOT, type=type)
+        dataset = InferenceDatasetV2(
+            InferenceDatasetV2.ROOT,
+            type=type,
+            transform=vjepa_transform if model_type == "vanilla_vjepa" else None,
+        )
 
         dist_sampler = torch.utils.data.distributed.DistributedSampler(
             dataset=dataset,
@@ -200,6 +209,7 @@ for year in years:
         def evaluate():
             for idx, x in enumerate(loader):
                 images = x.to(device, non_blocking=True, dtype=torch.float32)
+                print("Batch", idx, images.shape)
 
                 images = torch.nan_to_num(images, nan=0.0, posinf=0.0, neginf=0.0)
                 images = torch.clamp_min(images, 0)
