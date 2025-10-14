@@ -275,7 +275,10 @@ def main(args, resume_preempt=False):
         use_activation_checkpointing=False,
         in_chans=11,
     )
-    vjepa_checkpoint = torch.load("./jepa_checkpoints/vjepa_vitl.pt")
+    jepa_checkpoint_path = (
+        "/home/lucianodourado/weather-4-cast/jepa_checkpoints/vjepa_vitl.pt"
+    )
+    vjepa_checkpoint = torch.load(jepa_checkpoint_path)
     encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
     encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
     msg = vjepa.load_state_dict(encoder_checkpoint, strict=False)
@@ -424,10 +427,11 @@ def main(args, resume_preempt=False):
                 x, y = load_imgs()
 
                 with torch.amp.autocast(
-                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
+                    "cuda",
+                    dtype=torch.bfloat16,
+                    enabled=use_bfloat16,
                 ):
                     vjepa_embeddings = model(x)
-
                 loss = loss_function(vjepa_embeddings, y)
                 # loss = F.smooth_l1_loss(vjepa_embeddings, y)
 
