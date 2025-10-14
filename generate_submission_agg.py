@@ -125,7 +125,6 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir, model
 
                 def predict_simple(pred_tensor):
                     mean = torch.mean(pred_tensor)
-                    print("Mean shape:", mean.shape)  # Scalar
                     return mean.item() * 4
 
                 total_rain = predict_simple(prediction_patch)
