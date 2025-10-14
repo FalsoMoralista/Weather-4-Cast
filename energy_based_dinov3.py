@@ -46,7 +46,7 @@ from functools import partial
 
 from src.datasets.SatDataset import make_sat_dataset
 
-from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt
+from src.helper import load_DC_checkpoint, init_model, init_vjepa_opt, reload_checkpoint
 
 from src.models.vision_transformer import VisionTransformer
 
@@ -100,26 +100,6 @@ def main(args, resume_preempt=False):
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
 
-    # -- DATA
-    use_gaussian_blur = args["data"]["use_gaussian_blur"]
-    use_horizontal_flip = args["data"]["use_horizontal_flip"]
-    use_color_distortion = args["data"]["use_color_distortion"]
-    color_jitter = args["data"]["color_jitter_strength"]
-
-    drop_path = args["data"]["drop_path"]
-    mixup = args["data"]["mixup"]
-    cutmix = args["data"]["cutmix"]
-    reprob = args["data"]["reprob"]
-    nb_classes = args["data"]["nb_classes"]
-
-    # -- K-means
-    K_range = args["k_means"]["K_range"]
-    reinitialize_centroids = args["k_means"]["reinitialize_centroids"]
-
-    # -- VICReg
-    alpha = args["vicreg"]["alpha"]
-    beta = args["vicreg"]["beta"]
-    gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
     accum_iter = 128  # batch_size = accum_iter * batch_size
@@ -130,26 +110,11 @@ def main(args, resume_preempt=False):
     num_workers = args["data"]["num_workers"]
     root_path = args["data"]["root_path"]
     image_folder = args["data"]["image_folder"]
-    crop_size = args["data"]["crop_size"]
-    crop_scale = args["data"]["crop_scale"]
     resume_epoch = args["data"]["resume_epoch"]
-    cache_path = args["data"]["cache_path"]
 
-    # -- MASK
-    allow_overlap = args["mask"][
-        "allow_overlap"
-    ]  # whether to allow overlap b/w context and target blocks
-    patch_size = args["mask"]["patch_size"]  # patch-size for model training
-    num_enc_masks = args["mask"]["num_enc_masks"]  # number of context blocks
-    min_keep = args["mask"]["min_keep"]  # min number of patches in context block
-    enc_mask_scale = args["mask"]["enc_mask_scale"]  # scale of context blocks
-    num_pred_masks = args["mask"]["num_pred_masks"]  # number of target blocks
-    pred_mask_scale = args["mask"]["pred_mask_scale"]  # scale of target blocks
-    aspect_ratio = args["mask"]["aspect_ratio"]  # aspect ratio of target blocks
     # --
 
     # -- OPTIMIZATION
-    ema = args["optimization"]["ema"]
     ipe_scale = args["optimization"]["ipe_scale"]  # scheduler scale factor (def: 1.0)
     wd = float(args["optimization"]["weight_decay"])
     final_wd = float(args["optimization"]["final_weight_decay"])
@@ -158,7 +123,6 @@ def main(args, resume_preempt=False):
     start_lr = args["optimization"]["start_lr"]
     lr = args["optimization"]["lr"]
     final_lr = args["optimization"]["final_lr"]
-    smoothing = args["optimization"]["label_smoothing"]
 
     # -- LOGGING
     folder = args["logging"]["folder"]
@@ -334,27 +298,21 @@ def main(args, resume_preempt=False):
         }
         if rank == 0:
             torch.save(save_dict, latest_path)
-            if (epoch + 1) % checkpoint_freq == 0:
-                torch.save(save_dict, save_path.format(epoch=f"{epoch + 1}"))
-            elif epoch + 1 == 1:
-                torch.save(save_dict, save_path.format(epoch=f"{epoch + 1}"))
+            if epoch % checkpoint_freq == 0:
+                torch.save(save_dict, save_path.format(epoch=f"{epoch}"))
 
     print("Batch Size:", batch_size)
     logger.info(model)
 
     # TODO: ADJUST THIS later!
     if resume_epoch != 0:
-        target_encoder, optimizer, scaler, start_epoch = load_DC_checkpoint(
-            device=device,
-            r_path=load_path,
-            target_encoder=target_encoder,
-            opt=optimizer,
-            scaler=scaler,
-        )
-        for _ in range(resume_epoch * ipe):
-            scheduler.step()
-            wd_scheduler.step()
-
+        model = reload_checkpoint(model, resume_epoch, device)
+        num_steps_to_advance = resume_epoch * (ipe // accum_iter)
+        for _ in range(num_steps_to_advance):
+            new_lr = scheduler.step()
+            new_wd = wd_scheduler.step()
+        logger.info("Resuming LR %f" % (new_lr))
+        logger.info("Resuming WD %f" % (new_wd))
     start_epoch = resume_epoch
 
     # -- TRAINING LOOP
@@ -382,9 +340,7 @@ def main(args, resume_preempt=False):
             def train_step():
                 x, y = load_imgs()
 
-                with torch.amp.autocast(
-                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
-                ):
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
                     vjepa_embeddings = model(x)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
