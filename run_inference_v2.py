@@ -10,7 +10,6 @@ from src.models.vision_transformer import VisionTransformer
 from src.models.model_wrapper import ModelWrapper
 from src.models.model_v2 import ModelWrapperV2
 
-from torchvision import transforms
 from src.models.vision_transformer import vit_large_rope
 
 from src.datasets.InferenceDatasetv2 import InferenceDatasetV2, worker_init_fn
@@ -160,9 +159,51 @@ def load_vanilla_vjepa(epoch):
     return model
 
 
+def load_vanilla_vjepa_mse(epoch):
+    tag = "vjepa2"
+    model_path = (
+        "/home/rtcalumby/adam/luciano/vanilla_vjepa_mse/logs/"
+        + f"{tag}"
+        + f"-ep{epoch}.pth.tar"
+    )
+
+    checkpoint = torch.load(model_path, map_location=torch.device("cpu"))
+    logger.info(f"Loaded checkpoint from {model_path} at epoch {epoch}")
+
+    model_checkpoint = checkpoint["model"]
+
+    vjepa = vit_large_rope(
+        patch_size=16,
+        img_size=(224, 224),
+        num_frames=4,
+        tubelet_size=1,
+        use_activation_checkpointing=False,
+        in_chans=11,
+    )
+
+    model = ModelWrapperV2(
+        vjepa=vjepa,
+        patch_size=16,
+        dim_out=1024,
+        num_heads=16,
+        num_decoder_layers=8,
+        num_target_channels=16,
+        vjepa_size_in=14,
+        vjepa_size_out=18,
+        num_frames=4,
+    )
+
+    msg = model.load_state_dict(model_checkpoint)
+    print("Loading model state dict", msg)
+    model.eval()
+    del checkpoint
+    return model
+
+
 models = {
     "dinepa": load_dinepa,
     "vanilla_vjepa": load_vanilla_vjepa,
+    "vanilla_vjepa_mse": load_vanilla_vjepa_mse,
 }
 
 model_type = argv[1] if len(argv) > 1 else "dinepa"
@@ -185,7 +226,9 @@ for year in years:
         dataset = InferenceDatasetV2(
             InferenceDatasetV2.ROOT,
             type=type,
-            transform=vjepa_transform if model_type == "vanilla_vjepa" else None,
+            transform=vjepa_transform
+            if model_type == "vanilla_vjepa" or model_type == "vanilla_vjepa_mse"
+            else None,
         )
 
         dist_sampler = torch.utils.data.distributed.DistributedSampler(
