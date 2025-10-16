@@ -162,7 +162,7 @@ def load_vanilla_vjepa(epoch):
 def load_vanilla_vjepa_mse(epoch):
     tag = "vjepa2"
     model_path = (
-        "/home/rtcalumby/adam/luciano/vanilla_vjepa_mse/logs/"
+        "/home/rtcalumby/adam/luciano/vanilla-vjepa-mse/"
         + f"{tag}"
         + f"-ep{epoch}.pth.tar"
     )
