@@ -155,7 +155,7 @@ def generate_submission_files(predictions_dir, dictionary_dir, output_dir):
                     # Add this hour's average to the total
                     total_value += hourly_average
 
-                prediction_value = max(0, total_value.item())
+                prediction_value = max(0, 36 * total_value.item())
                 # --- END: MODIFIED LOGIC ---
                 
                 #########################################################################
