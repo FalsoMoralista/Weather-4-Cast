@@ -271,3 +271,39 @@ def init_vjepa_opt(
         T_max=int(ipe_scale*num_epochs*iterations_per_epoch))
     scaler = torch.amp.GradScaler('cuda') if use_bfloat16 else None
     return optimizer, scaler, scheduler, wd_scheduler
+
+
+def reload_checkpoint(model, epoch, device):
+    try:
+        r_path = '../../rtcalumby/adam/luciano/LifeCLEFPlant2022/logs/PlantNet300k_exp80/jepa-ep{}.pth.tar'.format(epoch)
+        checkpoint = torch.load(r_path, map_location=torch.device('cpu'))
+
+        for idx, key in enumerate(['downsample', 'vjepa']):
+
+            state_dict = {
+                k.replace(key+'.', ''): v for k, v in checkpoint['model'].items()
+                if k.startswith(key)
+            }
+            if idx == 0:
+                msg = model.downsample.load_state_dict(state_dict)
+            else:
+                msg = model.vjepa.load_state_dict(state_dict)  
+            logger.info(f'loaded layer {key} with msg: {msg}')
+
+        key = 'vit_decoder'
+        state_dict = {}
+        for k, v in checkpoint['model'].items():
+            if k.startswith(key):
+                new_key = k.replace('vit_decoder.', '', 1)
+                if any(name in new_key for name in ['patch_embed', 'blocks', 'norm', 'time_expansion', 'conv_regression']):
+                    state_dict[new_key] = v
+
+        msg = model.vit_decoder.load_state_dict(state_dict)
+        logger.info(f'loaded layer {key} with msg: {msg}')
+        model.to(device)
+        del checkpoint
+        return model 
+    except Exception as e:
+        logger.info(f'Encountered exception when loading checkpoint {e}')
+        epoch = 0
+
