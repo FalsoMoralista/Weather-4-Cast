@@ -180,12 +180,17 @@ class SatDataset(Dataset):
                 opera = self.opera_files[file_name]
                 input_start = idx - start
                 input_end = input_start + self.HRIT_WINDOW_SIZE
+
+                print(f"Loading from file: {file_name} at index: {idx}")
+                print(f"Input indices: {input_start} to {input_end}")
+
                 input = hrit[self.HRIT_KEY][input_start:input_end]
 
                 target_start = idx + self.HRIT_WINDOW_SIZE - start
                 target_end = (
                     idx - start + self.HRIT_WINDOW_SIZE + self.OPERA_WINDOW_SIZE
                 )
+                print(f"Target indices: {target_start} to {target_end}")
                 target = opera[self.OPERA_KEY][target_start:target_end]
 
                 input = F.interpolate(
@@ -212,6 +217,11 @@ if __name__ == "__main__":
 
     dataset = SatDataset(SatDataset.ROOT, type="train" if training else "val")
 
+    input_sample, target_sample = dataset[0]
+
+    print(f"Input sample shape: {input_sample.shape}", flush=True)
+    print(f"Target sample shape: {target_sample.shape}", flush=True)
+
     print(f"Dataset length: {len(dataset)}", flush=True)
 
     logger.info("Sat dataset created")
@@ -233,9 +243,9 @@ if __name__ == "__main__":
 
     print(f"Loader length: {len(loader)} - Batch size: {loader.batch_size}")
 
-    for i, data in enumerate(loader):
-        input, target = data
-        logger.info(input.size(), target.size())
-        logger.info(
-            f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}"
-        )
+    # for i, data in enumerate(loader):
+    #     input, target = data
+    #     logger.info(input.size(), target.size())
+    #     logger.info(
+    #         f"Batch {i} - Input shape: {input.shape}, Target shape: {target.shape}"
+    #     )
