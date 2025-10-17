@@ -66,6 +66,8 @@ from torchvision import transforms
 from PIL import Image
 import random
 
+from src.transforms import RandomSuperResCrop, CenterSuperResCrop
+
 # --
 log_timings = True
 log_freq = 128
@@ -78,6 +80,32 @@ torch.manual_seed(_GLOBAL_SEED)
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
+
+
+def dino_train_transform(sample):
+    x, _ = sample
+    resize = transforms.Resize((224, 224))
+    crop = RandomSuperResCrop(32, 32, 6)
+    x = crop(x)
+    x = resize(x)
+    return (x, _)
+
+
+def dino_val_transform(sample):
+    x, _ = sample
+    resize = transforms.Resize((224, 224))
+    crop = CenterSuperResCrop(32, 32, 6, 16)
+    x = crop(x)
+    x = resize(x)
+    return (x, _)
+
+
+def make_val_transform():
+    return dino_val_transform
+
+
+def make_train_transform():
+    return dino_train_transform
 
 
 def main(args, resume_preempt=False):
@@ -99,7 +127,6 @@ def main(args, resume_preempt=False):
     else:
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
-
 
     # -- # Gradient accumulation
     accum_iter = 128  # batch_size = accum_iter * batch_size
@@ -175,9 +202,12 @@ def main(args, resume_preempt=False):
         ("%d", "time (ms)"),
     )
 
+    train_transformer = make_train_transform()
+    val_transformer = make_val_transform()
+
     # -- init data-loaders/samplers
     train_dataset, supervised_loader_train, supervised_sampler_train = make_sat_dataset(
-        transform=None,
+        transform=train_transformer,
         batch_size=batch_size,
         collator=None,
         pin_mem=True,
@@ -192,7 +222,7 @@ def main(args, resume_preempt=False):
     )
 
     val_dataset, supervised_loader_val, supervised_sampler_val = make_sat_dataset(
-        transform=None,
+        transform=val_transformer,
         batch_size=batch_size,  # TODO: double it up
         collator=None,
         pin_mem=True,
@@ -340,7 +370,11 @@ def main(args, resume_preempt=False):
             def train_step():
                 x, y = load_imgs()
 
-                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
+                with torch.amp.autocast(
+                    "cuda",
+                    dtype=torch.bfloat16,
+                    enabled=use_bfloat16,
+                ):
                     vjepa_embeddings = model(x)
 
                 loss = F.smooth_l1_loss(vjepa_embeddings, y)
