@@ -5,12 +5,14 @@ import torchvision.transforms as T
 from src.models.vision_transformer import VisionTransformer
 from functools import partial
 
+
 class VisionTransformerDecoder(nn.Module):
-    '''
-        Non auto-regressive pixel decoder.
-        
-        (TODO) [...]
-    '''
+    """
+    Non auto-regressive pixel decoder.
+
+    (TODO) [...]
+    """
+
     def __init__(
         self,
         T,
@@ -23,7 +25,7 @@ class VisionTransformerDecoder(nn.Module):
         vjepa_size_in,
         *args,
         **kwargs,
-    ):    
+    ):
         super().__init__(*args, **kwargs)
         self.T = T
         self.H_patches = H_patches
@@ -35,10 +37,22 @@ class VisionTransformerDecoder(nn.Module):
         self.dim_out = dim_out
 
         self.act = nn.GELU()
-        
-        self.time_expansion = nn.Conv2d(4,num_target_channels,kernel_size=3,stride=1,padding=1,)
-               
-        self.conv_regression = nn.ConvTranspose2d(in_channels=1024, out_channels=1, kernel_size=18, stride=18)
+
+        self.time_expansion = nn.Conv2d(
+            4,
+            num_target_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
+
+        # self.conv_regression = nn.ConvTranspose2d(in_channels=1024, out_channels=1, kernel_size=18, stride=18)
+        self.conv_regression = nn.ConvTranspose2d(
+            in_channels=1024,
+            out_channels=1,
+            kernel_size=6,
+            stride=2,
+        )
 
         self.vit_decoder = VisionTransformer(
             img_size=(224, 224),
@@ -54,15 +68,23 @@ class VisionTransformerDecoder(nn.Module):
             use_rope=True,
             tubelet_size=1,
             ignore_patches=True,
-            use_activation_checkpointing=False
+            use_activation_checkpointing=False,
         )
 
     def forward(self, x):
         B, _, _ = x.shape
-        x = x.view(B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out) # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
-        x = self.time_expansion(x) # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
+        x = x.view(
+            B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out
+        )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
+        x = self.time_expansion(
+            x
+        )  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
         x = self.act(x)
-        x = x.view(-1, self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in, self.dim_out) # From (B, 16, 196, 1024) to (B, 16*196, 1024)
+        x = x.view(
+            -1,
+            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
+            self.dim_out,
+        )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
         x = self.vit_decoder(
             x,
             T=self.num_target_channels,
@@ -70,11 +92,15 @@ class VisionTransformerDecoder(nn.Module):
             H_patches=self.H_patches,
             W_patches=self.W_patches,
         )
-        x = x.view(B * self.num_target_channels, self.dim_out, self.vjepa_size_in, self.vjepa_size_in) # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
+        x = x.view(
+            B * self.num_target_channels,
+            self.dim_out,
+            self.vjepa_size_in,
+            self.vjepa_size_in,
+        )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
         x = self.conv_regression(x)
-        x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))       
+        x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
         return x
-
 
 
 class ModelWrapper(nn.Module):
@@ -103,14 +129,16 @@ class ModelWrapper(nn.Module):
         self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
 
-        self.vit_decoder = VisionTransformerDecoder(T=num_frames,
-                                                    vjepa_size_in=vjepa_size_in,
-                                                    dim_out=dim_out,
-                                                    num_layers=num_decoder_layers,
-                                                    num_heads=num_heads,
-                                                    H_patches=224 // patch_size,
-                                                    W_patches=224 // self.patch_size,
-                                                    num_target_channels=num_target_channels)
+        self.vit_decoder = VisionTransformerDecoder(
+            T=num_frames,
+            vjepa_size_in=vjepa_size_in,
+            dim_out=dim_out,
+            num_layers=num_decoder_layers,
+            num_heads=num_heads,
+            H_patches=224 // patch_size,
+            W_patches=224 // self.patch_size,
+            num_target_channels=num_target_channels,
+        )
 
         # DinoV3 SAT normalization config
         # https://huggingface.co/facebook/dinov3-vit7b16-pretrain-sat493m/resolve/main/preprocessor_config.json
@@ -130,7 +158,9 @@ class ModelWrapper(nn.Module):
         tokens = features["x_norm_patchtokens"]  # (B*T, num_patches, embed_dim)
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
-        tokens = tokens.reshape(B, T * tokens.size(1), tokens.size(2)).clone() # Inference mode tensors requires cloning for grad mode reutilisation
+        tokens = tokens.reshape(
+            B, T * tokens.size(1), tokens.size(2)
+        ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
         vjepa_out = self.vjepa(
             x=tokens,
             tokenize=False,
@@ -138,14 +168,14 @@ class ModelWrapper(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        regressed = self.vit_decoder(vjepa_out) # B, 16, 1, 252, 252
-        #print(f'regressed output size: {regressed.shape}',flush=True)
-        
-        #out = regressed.view(
+        regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
+        # print(f'regressed output size: {regressed.shape}',flush=True)
+
+        # out = regressed.view(
         #    B,
         #    self.num_target_channels,
         #    self.vjepa_size_out * self.vjepa_size_in,
         #    self.vjepa_size_out * self.vjepa_size_in,
-        #)
+        # )
 
         return regressed
