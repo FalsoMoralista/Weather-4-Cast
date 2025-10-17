@@ -126,7 +126,8 @@ class _BaseSuperResCrop(nn.Module):
         raise NotImplementedError
 
     def forward(self, sample: tuple) -> tuple:
-        x, y, metadata = sample
+        # x, y, metadata = sample
+        x, y = sample
         lr_h, lr_w = x.shape[-2:]
 
         y_hr_start, x_hr_start = self.get_crop_params(y)
@@ -164,21 +165,22 @@ class _BaseSuperResCrop(nn.Module):
         else:
             y_cropped = torch.zeros(placeholder_shape, dtype=x.dtype, device=x.device)
 
-        mask = metadata.get("target", {}).get("mask")
+        # mask = metadata.get("target", {}).get("mask")
 
-        if mask is not None and mask.numel() > 0:
-            mask_cropped = mask[
-                ...,
-                y_hr_start : y_hr_start + self.output_patch_size,
-                x_hr_start : x_hr_start + self.output_patch_size,
-            ]
-            metadata["target"]["mask"] = mask_cropped
-        else:
-            metadata["target"]["mask"] = torch.zeros(
-                placeholder_shape, dtype=x.dtype, device=x.device
-            )
+        # if mask is not None and mask.numel() > 0:
+        #     mask_cropped = mask[
+        #         ...,
+        #         y_hr_start : y_hr_start + self.output_patch_size,
+        #         x_hr_start : x_hr_start + self.output_patch_size,
+        #     ]
+        #     metadata["target"]["mask"] = mask_cropped
+        # else:
+        #     metadata["target"]["mask"] = torch.zeros(
+        #         placeholder_shape, dtype=x.dtype, device=x.device
+        #     )
 
-        return x_cropped, y_cropped, metadata
+        # return x_cropped, y_cropped, metadata
+        return x_cropped, y_cropped
 
 
 class RandomSuperResCrop(_BaseSuperResCrop):
