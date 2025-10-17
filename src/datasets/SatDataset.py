@@ -194,11 +194,10 @@ class SatDataset(Dataset):
                     size=self.input_size,
                     mode="bicubic",
                 )
+                target = tensor(target)
 
                 if self.transform:
-                    input = self.transform(input)
-
-                target = tensor(target)
+                    input, target = self.transform((input, target))
                 return input, target
 
 
