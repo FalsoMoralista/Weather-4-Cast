@@ -83,19 +83,17 @@ logger = logging.getLogger()
 
 
 def dino_train_transform(sample):
-    x, _ = sample
     resize = transforms.Resize((224, 224))
     crop = RandomSuperResCrop(32, 32, 6)
-    x = crop(x)
+    x, _ = crop(sample)
     x = resize(x)
     return (x, _)
 
 
 def dino_val_transform(sample):
-    x, _ = sample
     resize = transforms.Resize((224, 224))
     crop = CenterSuperResCrop(32, 32, 6, 16)
-    x = crop(x)
+    x, _ = crop(sample)
     x = resize(x)
     return (x, _)
 
