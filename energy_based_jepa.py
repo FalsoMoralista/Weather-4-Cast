@@ -329,7 +329,6 @@ def main(args, resume_preempt=False):
         num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=14,
-        vjepa_size_out=18,
         num_frames=4,
         image_size=32,
     ).to(device)

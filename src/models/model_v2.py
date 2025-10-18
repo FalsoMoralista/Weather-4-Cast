@@ -110,7 +110,6 @@ class ModelWrapperV2(nn.Module):
         num_decoder_layers=4,
         num_target_channels=16,
         vjepa_size_in=14,
-        vjepa_size_out=18,
         num_frames=4,
         image_size=32,
     ):
@@ -119,7 +118,6 @@ class ModelWrapperV2(nn.Module):
         self.patch_size = patch_size
         self.num_target_channels = num_target_channels
         self.vjepa_size_in = vjepa_size_in
-        self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
         self.image_size = image_size
 
