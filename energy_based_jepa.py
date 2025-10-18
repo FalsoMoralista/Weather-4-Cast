@@ -262,8 +262,8 @@ def main(args, resume_preempt=False):
     print("Training dataset, length:", ipe * batch_size)
 
     vjepa = vit_large_rope(
-        patch_size=16,
-        img_size=(224, 224),
+        patch_size=2,
+        img_size=(32, 32),
         # mlp_ratio=4,
         num_frames=4,
         # use_rope=True,
