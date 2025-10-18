@@ -323,7 +323,7 @@ def main(args, resume_preempt=False):
 
     model = ModelWrapperV2(
         vjepa=vjepa,
-        patch_size=16,
+        patch_size=2,
         dim_out=1024,
         num_heads=16,
         num_decoder_layers=8,
@@ -331,6 +331,7 @@ def main(args, resume_preempt=False):
         vjepa_size_in=14,
         vjepa_size_out=18,
         num_frames=4,
+        image_size=32,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
