@@ -39,32 +39,31 @@ from utils.checkpoint import remove_prefix, remove_with_name
 from src.helper import load_DC_checkpoint, init_vjepa_opt
 
 from src.models.model_v2 import ModelWrapperV2
-from src.models.utils.patch_embed import PatchEmbed3D
 from src.models.vision_transformer import vit_large_rope
 
-from torchvision import transforms
+from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
 
-def permute(x):
-    return x.permute(1, 0, 2, 3)
+def vjepa_train_transform(sample):
+    crop = RandomSuperResCrop(32, 32, 6)
+    x, _ = crop(sample)
+    x = x.permute(1, 0, 2, 3)
+    return (x, _)
 
 
-def composed():
-    return transforms.Compose(
-        [
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ]
-    )
+def vjepa_val_transform(sample):
+    crop = CenterSuperResCrop(32, 32, 6, 16)
+    x, _ = crop(sample)
+    x = x.permute(1, 0, 2, 3)
+    return (x, _)
 
 
-def transform_inner(x):
-    # t = composed()
-    # x = t(x)
-    return permute(x)
+def make_val_transform():
+    return vjepa_val_transform
 
 
-def make_transforms():
-    return transform_inner
+def make_train_transform():
+    return vjepa_train_transform
 
 
 # --
@@ -225,11 +224,12 @@ def main(args, resume_preempt=False):
         ("%d", "time (ms)"),
     )
 
-    video_transform = make_transforms()
+    train_transform = make_train_transform()
+    val_transform = make_val_transform()
 
     # -- init data-loaders/samplers
     train_dataset, supervised_loader_train, supervised_sampler_train = make_sat_dataset(
-        transform=video_transform,
+        transform=train_transform,
         batch_size=batch_size,
         collator=None,
         pin_mem=True,
@@ -244,7 +244,7 @@ def main(args, resume_preempt=False):
     )
 
     val_dataset, supervised_loader_val, supervised_sampler_val = make_sat_dataset(
-        transform=video_transform,
+        transform=val_transform,
         batch_size=batch_size,  # TODO: double it up
         collator=None,
         pin_mem=True,
