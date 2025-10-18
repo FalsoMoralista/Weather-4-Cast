@@ -18,7 +18,7 @@ data:
   use_color_distortion: false
   use_gaussian_blur: false
   use_horizontal_flip: false
-  resume_epoch: 20
+  resume_epoch: 0
 dinov2: false
 dinov2_meta:
   model_name: vit_large  
@@ -49,7 +49,7 @@ mask:
   - 0.2
 meta:
   copy_data: false
-  load_checkpoint: false
+  load_checkpoint: true
   model_name: vit_huge
   pred_depth: 12
   pred_emb_dim: 384
