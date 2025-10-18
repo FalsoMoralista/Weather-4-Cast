@@ -46,7 +46,10 @@ class VisionTransformerDecoder(nn.Module):
         )
 
         self.conv_regression = nn.ConvTranspose2d(
-            in_channels=dim_out, out_channels=1, kernel_size=18, stride=18
+            in_channels=dim_out,
+            out_channels=1,
+            kernel_size=6,
+            stride=2,
         )
 
         self.vit_decoder = VisionTransformer(
