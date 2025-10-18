@@ -133,9 +133,12 @@ class ModelWrapperV2(nn.Module):
         )
 
     def forward(self, x):
-        B, C, T, H, W = x.shape  # (B, T=4, 11, 252, 252)
+        B, C, T, H, W = x.shape  # (B, T=4, 11, 32, 32)
+        print("Input shape:", x.shape)
+        print("Patch size:", self.patch_size)
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
+        print("H_patches:", H_patches, "W_patches:", W_patches)
         vjepa_out = self.vjepa(
             x=x,
             tokenize=True,
@@ -143,5 +146,6 @@ class ModelWrapperV2(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
+        print("VJEPA output shape:", vjepa_out.shape)
+        regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 32, 32
         return regressed
