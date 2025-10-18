@@ -30,7 +30,7 @@ class VisionTransformerDecoder(nn.Module):
         self.H_patches = H_patches
         self.W_patches = W_patches
         self.num_target_channels = num_target_channels
-        self.patch_size = 16
+        self.patch_size = 2
         self.vjepa_size_in = vjepa_size_in
 
         self.dim_out = dim_out
@@ -48,13 +48,13 @@ class VisionTransformerDecoder(nn.Module):
         self.conv_regression = nn.ConvTranspose2d(
             in_channels=dim_out,
             out_channels=1,
-            kernel_size=6,
-            stride=2,
+            kernel_size=17,
+            stride=1,
         )
 
         self.vit_decoder = VisionTransformer(
             img_size=(32, 32),
-            patch_size=2,
+            patch_size=self.patch_size,
             in_chans=num_target_channels,  # 16
             embed_dim=dim_out,  # 1024
             depth=num_layers,
