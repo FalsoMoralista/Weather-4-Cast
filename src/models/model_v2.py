@@ -50,8 +50,8 @@ class VisionTransformerDecoder(nn.Module):
         )
 
         self.vit_decoder = VisionTransformer(
-            img_size=(224, 224),
-            patch_size=16,
+            img_size=(32, 32),
+            patch_size=2,
             in_chans=num_target_channels,  # 16
             embed_dim=dim_out,  # 1024
             depth=num_layers,
