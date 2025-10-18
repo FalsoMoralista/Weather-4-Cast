@@ -119,6 +119,7 @@ class ModelWrapperV2(nn.Module):
         vjepa_size_in=14,
         vjepa_size_out=18,
         num_frames=4,
+        image_size=32,
     ):
         super(ModelWrapperV2, self).__init__()
         self.vjepa = vjepa
@@ -128,8 +129,7 @@ class ModelWrapperV2(nn.Module):
         self.vjepa_size_in = vjepa_size_in
         self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
-
-        image_size = 224
+        self.image_size = image_size
 
         self.vit_decoder = VisionTransformerDecoder(
             T=num_frames,
@@ -137,8 +137,8 @@ class ModelWrapperV2(nn.Module):
             dim_out=dim_out,
             num_layers=num_decoder_layers,
             num_heads=num_heads,
-            H_patches=image_size // self.patch_size,
-            W_patches=image_size // self.patch_size,
+            H_patches=self.image_size // self.patch_size,
+            W_patches=self.image_size // self.patch_size,
             num_target_channels=num_target_channels,
         )
 
