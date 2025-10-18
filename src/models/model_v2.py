@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-import torchvision.transforms as T
 from src.models.vision_transformer import VisionTransformer
 from functools import partial
 
