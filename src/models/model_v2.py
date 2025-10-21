@@ -22,6 +22,9 @@ class VisionTransformerDecoder(nn.Module):
         H_patches,
         W_patches,
         vjepa_size_in,
+        image_size=32,
+        n_bins=129,
+        patch_size=2,
         *args,
         **kwargs,
     ):
@@ -30,7 +33,9 @@ class VisionTransformerDecoder(nn.Module):
         self.H_patches = H_patches
         self.W_patches = W_patches
         self.num_target_channels = num_target_channels
-        self.patch_size = 2
+        self.patch_size = patch_size
+        self.n_bins = n_bins
+        self.image_size = image_size
         self.vjepa_size_in = vjepa_size_in
 
         self.dim_out = dim_out
@@ -38,7 +43,7 @@ class VisionTransformerDecoder(nn.Module):
         self.act = nn.GELU()
 
         self.time_expansion = nn.Conv2d(
-            4,
+            T,
             num_target_channels,
             kernel_size=3,
             stride=1,
@@ -50,6 +55,13 @@ class VisionTransformerDecoder(nn.Module):
             out_channels=1,
             kernel_size=17,
             stride=1,
+        )
+
+        self.conv_bins = nn.Conv3d(
+            in_channels=1,
+            out_channels=self.n_bins,
+            kernel_size=(1, self.image_size, self.image_size),
+            stride=self.image_size,
         )
 
         self.vit_decoder = VisionTransformer(
@@ -96,7 +108,8 @@ class VisionTransformerDecoder(nn.Module):
             self.vjepa_size_in,
         )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
         x = self.conv_regression(x)
-        x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
+        x = self.act(x).view(B, 1, self.num_target_channels, x.size(-2), x.size(-1))
+        x = self.conv_bins(x).squeeze(2, 3, 4)  # B, 16, 129
         return x
 
 
@@ -112,6 +125,7 @@ class ModelWrapperV2(nn.Module):
         vjepa_size_in=14,
         num_frames=4,
         image_size=32,
+        n_bins=129,
     ):
         super(ModelWrapperV2, self).__init__()
         self.vjepa = vjepa
@@ -120,6 +134,7 @@ class ModelWrapperV2(nn.Module):
         self.vjepa_size_in = vjepa_size_in
         self.dim_out = dim_out
         self.image_size = image_size
+        self.n_bins = n_bins
 
         self.vit_decoder = VisionTransformerDecoder(
             T=num_frames,
@@ -130,6 +145,9 @@ class ModelWrapperV2(nn.Module):
             H_patches=self.image_size // self.patch_size,
             W_patches=self.image_size // self.patch_size,
             num_target_channels=num_target_channels,
+            image_size=image_size,
+            patch_size=patch_size,
+            n_bins=n_bins,
         )
 
     def forward(self, x):
@@ -143,5 +161,5 @@ class ModelWrapperV2(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 32, 32
+        regressed = self.vit_decoder(vjepa_out)  # B, 16, 129
         return regressed
