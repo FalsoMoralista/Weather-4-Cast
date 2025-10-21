@@ -22,7 +22,7 @@ def crps_discrete_from_probs(probs, y_true_mm, bins):
     return ((F_pred - T) ** 2 * delta.unsqueeze(0)).sum(dim=-1).mean()
 
 
-def crps_loss(y: torch.Tensor, y_hat: torch.Tensor):
+def crps_loss(y_hat: torch.Tensor, y: torch.Tensor):
     probs = torch.softmax(y_hat, dim=-1)
     m = y.mean(dim=(2, 3))  # [B, 16] média espacial por slot (mm/h)
     y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
