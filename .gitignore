@@ -11,3 +11,5 @@ slurm*
 logs/
 jepa_checkpoints/
 predictions/
+dinepa_v2/
+vanilla_vjepa/

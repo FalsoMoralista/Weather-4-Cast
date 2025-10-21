@@ -70,7 +70,7 @@ from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
 # --
 log_timings = True
-log_freq = 128
+log_freq = 64
 checkpoint_freq = 1
 # --
 
@@ -84,7 +84,7 @@ logger = logging.getLogger()
 
 def dino_train_transform(sample):
     resize = transforms.Resize((224, 224))
-    crop = RandomSuperResCrop(32, 32, 6)
+    crop = RandomSuperResCrop(input_patch_size=32, output_patch_size=32, scale_factor=6, rain_sampling_p = 0.75, rain_sampling_threshold = 0.2)
     x, _ = crop(sample)
     x = resize(x)
     return (x, _)
@@ -127,7 +127,7 @@ def main(args, resume_preempt=False):
         torch.cuda.set_device(device)
 
     # -- # Gradient accumulation
-    accum_iter = 128  # batch_size = accum_iter * batch_size
+    accum_iter = 64  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -244,8 +244,8 @@ def main(args, resume_preempt=False):
         num_frames=4,
         use_rope=True,
         embed_dim=1024,
-        num_heads=16,
-        depth=16,
+        num_heads=32,
+        depth=12,
         tubelet_size=1,
         ignore_patches=True,
         use_activation_checkpointing=False,
@@ -272,8 +272,8 @@ def main(args, resume_preempt=False):
         backbone=dinov3,
         vjepa=vjepa,
         patch_size=16,
-        dim_out=1024,
-        num_heads=16,
+        dim_out=384,
+        num_heads=32,
         num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=14,
@@ -365,17 +365,61 @@ def main(args, resume_preempt=False):
                 #    torch.where(isFinite, img, torch.tensor(0.0, dtype=torch.float32, device=device), out=img)
                 return (img, target)
 
+            def crps_categorical(probs, y_true, bins):
+                """
+                Computes the CRPS for a categorical (binned) prediction.
+                
+                Args:
+                    probs (torch.Tensor): Predicted probabilities for each bin. Shape (B, N_BINS).
+                    y_true (torch.Tensor): Ground truth values. Shape (B,).
+                    bins (torch.Tensor): The center or lower edge of the bins. Shape (N_BINS,).
+                    
+                Returns:
+                    torch.Tensor: The CRPS loss for the batch.
+                """
+                # 1. Predicted CDF: Cumulative sum of probabilities
+                cdf_pred = torch.cumsum(probs, dim=1)
+                
+                # 2. Ground Truth CDF: A step function (Heaviside function)
+                # It is 0 for all bins < true value, and 1 for all bins >= true value.
+                # We find which bin the true value falls into.
+                # `torch.ge` creates a boolean mask.
+                cdf_true = (y_true.unsqueeze(1).ge(bins)).float()
+
+                #print('cdfpred',cdf_pred.size() ,flush=True)
+                #print('cdftrue',cdf_true.size() ,flush=True)
+                # 3. CRPS calculation
+                squared_diff = (cdf_pred - cdf_true)**2
+                crps = torch.sum(squared_diff, dim=1)
+                
+                return crps
+
+
             def train_step():
                 x, y = load_imgs()
 
-                with torch.amp.autocast(
-                    "cuda",
-                    dtype=torch.bfloat16,
-                    enabled=use_bfloat16,
-                ):
+                with torch.amp.autocast("cuda",dtype=torch.bfloat16,enabled=use_bfloat16):
                     vjepa_embeddings = model(x)
+                    #loss = F.mse_loss(vjepa_embeddings, y)
 
-                loss = F.smooth_l1_loss(vjepa_embeddings, y)
+                hourly_losses = []
+                for hour_idx in range(4):
+                    start_frame = hour_idx * 4
+                    end_frame = start_frame + 4
+
+                    agg_logits = vjepa_embeddings[:, start_frame:end_frame,:].sum(dim=1)
+                    # 3. Apply Softmax to get the final probability distribution
+                    probs_agg = torch.softmax(agg_logits, dim=1)
+
+                    # 4. Aggregate Ground Truth for the hour
+                    y_true_sum = torch.sum(y[:, start_frame:end_frame, :, :], dim=1).squeeze(1)
+                    y_true_agg = torch.mean(y_true_sum, dim=(1, 2)) # Shape: (B,)
+                    
+                    # 5. Calculate CRPS loss
+                    loss_hour = crps_categorical(probs_agg, y_true_agg, 129)
+                    hourly_losses.append(loss_hour)
+
+                loss = torch.mean(torch.stack(hourly_losses))
 
                 loss_val = loss.item()
 
