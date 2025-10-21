@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from torch import tensor
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 
 import torch.nn.functional as F
@@ -194,7 +194,7 @@ class SatDataset(Dataset):
                     size=self.input_size,
                     mode="bicubic",
                 )
-                target = tensor(target)
+                target = tensor(target).squeeze(1)
 
                 if self.transform:
                     input, target = self.transform((input, target))
