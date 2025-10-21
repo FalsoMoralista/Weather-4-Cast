@@ -365,62 +365,37 @@ def main(args, resume_preempt=False):
                 #    torch.where(isFinite, img, torch.tensor(0.0, dtype=torch.float32, device=device), out=img)
                 return (img, target)
 
-            def crps_categorical(probs, y_true, bins):
+            def crps_discrete_from_probs(probs, y_true_mm, bins):
                 """
-                Computes the CRPS for a categorical (binned) prediction.
-                
-                Args:
-                    probs (torch.Tensor): Predicted probabilities for each bin. Shape (B, N_BINS).
-                    y_true (torch.Tensor): Ground truth values. Shape (B,).
-                    bins (torch.Tensor): The center or lower edge of the bins. Shape (N_BINS,).
-                    
-                Returns:
-                    torch.Tensor: The CRPS loss for the batch.
+                probs: [B, K]  (probabilidades por bin; soma=1)
+                y_true_mm: [B] (alvo em mm, acumulado 4h)
+                bins: [K]      (valores y_k crescentes, em mm)
                 """
-                # 1. Predicted CDF: Cumulative sum of probabilities
-                cdf_pred = torch.cumsum(probs, dim=1)
-                
-                # 2. Ground Truth CDF: A step function (Heaviside function)
-                # It is 0 for all bins < true value, and 1 for all bins >= true value.
-                # We find which bin the true value falls into.
-                # `torch.ge` creates a boolean mask.
-                cdf_true = (y_true.unsqueeze(1).ge(bins)).float()
+                # CDF prevista
+                probs = probs / probs.sum(dim=-1, keepdim=True)
+                F_pred = probs.cumsum(dim=-1)  # [B, K]
 
-                #print('cdfpred',cdf_pred.size() ,flush=True)
-                #print('cdftrue',cdf_true.size() ,flush=True)
-                # 3. CRPS calculation
-                squared_diff = (cdf_pred - cdf_true)**2
-                crps = torch.sum(squared_diff, dim=1)
-                
+                # CDF-verdade (degrau em x): T_k = 1{ y_k >= x }
+                T = (y_true_mm.unsqueeze(1).ge(bins.unsqueeze(0))).float() #(bins.unsqueeze(0) <= y_true_mm.unsqueeze(1)).float()  # [B, K]
+
+                # Weights Δ_k (larguras)
+                delta = torch.diff(bins, prepend=bins[:1]) # useless as bins have uniform width
+
+                crps = ((F_pred - T)**2 * delta.unsqueeze(0)).sum(dim=-1).mean()
                 return crps
 
 
             def train_step():
-                x, y = load_imgs()
-
+                x, y = load_imgs()                
                 with torch.amp.autocast("cuda",dtype=torch.bfloat16,enabled=use_bfloat16):
-                    vjepa_embeddings = model(x)
-                    #loss = F.mse_loss(vjepa_embeddings, y)
+                    vjepa_logits = model(x)
 
-                hourly_losses = []
-                for hour_idx in range(4):
-                    start_frame = hour_idx * 4
-                    end_frame = start_frame + 4
-
-                    agg_logits = vjepa_embeddings[:, start_frame:end_frame,:].sum(dim=1)
-                    # 3. Apply Softmax to get the final probability distribution
-                    probs_agg = torch.softmax(agg_logits, dim=1)
-
-                    # 4. Aggregate Ground Truth for the hour
-                    y_true_sum = torch.sum(y[:, start_frame:end_frame, :, :], dim=1).squeeze(1)
-                    y_true_agg = torch.mean(y_true_sum, dim=(1, 2)) # Shape: (B,)
-                    
-                    # 5. Calculate CRPS loss
-                    loss_hour = crps_categorical(probs_agg, y_true_agg, 129)
-                    hourly_losses.append(loss_hour)
-
-                loss = torch.mean(torch.stack(hourly_losses))
-
+                probs = torch.softmax(vjepa_logits, dim=-1)                
+                y = y.squeeze(2)
+                m = y.mean(dim=(2, 3))            # [B,16] média espacial por slot (mm/h)
+                y_true_mm = m.sum(dim=1) / 4.0    # [B]  acum. 4h em mm
+                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0., 512.+4, 4., device=device))
+                
                 loss_val = loss.item()
 
                 loss_meter.update(loss_val)
@@ -454,7 +429,7 @@ def main(args, resume_preempt=False):
                 # grad_stats = grad_logger(model.module.named_parameters())
 
                 return (loss_val, _new_lr, _new_wd)
-
+            
             (loss, _new_lr, _new_wd), etime = gpu_timer(train_step)
 
             total_loss_meter.update(loss)
@@ -515,16 +490,16 @@ def main(args, resume_preempt=False):
 
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
                     with torch.inference_mode():
-                        reconstructed_matrix = model(images)
+                        model_logits = model(images)
+                
+                probs = torch.softmax(model_logits, dim=-1)                
+                m = labels.mean(dim=(2, 3))
+                y_true_mm = m.sum(dim=1) / 4.0 # [B]  acum. 4h em mm
+                test_loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0., 512.+4, 4., device=device))
 
-                mae = F.smooth_l1_loss(
-                    reconstructed_matrix, labels
-                )  # MAE(reconstructed_matrix, labels)
-                test_mae.update(mae)
+            total_test_loss_meter.update(test_loss)
 
-            total_test_loss_meter.update(test_mae.avg)
-
-            logger.info(f"Average accuracy over evaluation dataset: {test_mae.avg:.3f}")
+            logger.info(f"Average accuracy over evaluation dataset: {test_loss:.3f}")
             logger.info(
                 "Mean Average error across epochs: %.3f" % total_test_loss_meter.avg
             )

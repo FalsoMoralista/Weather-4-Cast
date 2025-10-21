@@ -55,10 +55,10 @@ class VisionTransformerDecoder(nn.Module):
             stride=2,
         )
 
-        self.conv_bins = nn.Conv2d(
+        self.conv_bins = nn.Conv3d(
             in_channels=1,
             out_channels=self.n_bins,
-            kernel_size=32,
+            kernel_size=(1,32,32),
             stride=32
         )
 
@@ -108,9 +108,9 @@ class VisionTransformerDecoder(nn.Module):
         )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
 
         x = self.conv_regression(x)
-        x = self.act(x)
-        x = self.conv_bins(x).squeeze(2,3)
-        x = x.view(B, self.num_target_channels, x.size(-1)) # (B, 16, 32,32)
+        x = self.act(x).view(B, 1, self.num_target_channels, x.size(-2), x.size(-1))
+        x = self.conv_bins(x).squeeze(2,3,4)
+        #x = x.view(B, self.num_target_channels, x.size(-1)).squeeze(2,3,4) # (B, 16, 32,32)
         #x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
         return x
 
