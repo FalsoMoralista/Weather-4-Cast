@@ -324,13 +324,14 @@ def main(args, resume_preempt=False):
     model = ModelWrapperV2(
         vjepa=vjepa,
         patch_size=2,
-        dim_out=1024,
+        dim_out=384,
         num_heads=32,
-        num_decoder_layers=4,
+        num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
+        n_bins=129,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
