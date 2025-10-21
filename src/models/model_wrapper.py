@@ -58,8 +58,8 @@ class VisionTransformerDecoder(nn.Module):
         self.conv_bins = nn.Conv3d(
             in_channels=1,
             out_channels=self.n_bins,
-            kernel_size=(1,32,32),
-            stride=32
+            kernel_size=(1, 32, 32),
+            stride=32,
         )
 
         self.vit_decoder = VisionTransformer(
@@ -109,9 +109,9 @@ class VisionTransformerDecoder(nn.Module):
 
         x = self.conv_regression(x)
         x = self.act(x).view(B, 1, self.num_target_channels, x.size(-2), x.size(-1))
-        x = self.conv_bins(x).squeeze(2,3,4)
-        #x = x.view(B, self.num_target_channels, x.size(-1)).squeeze(2,3,4) # (B, 16, 32,32)
-        #x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
+        x = self.conv_bins(x).squeeze(2, 3, 4)
+        # x = x.view(B, self.num_target_channels, x.size(-1)).squeeze(2,3,4) # (B, 16, 32,32)
+        # x = x.view(B, self.num_target_channels, 1, x.size(-2), x.size(-1))
         return x
 
 
@@ -184,7 +184,7 @@ class ModelWrapper(nn.Module):
             W_patches=W_patches,
         )
 
-        squeezed_out = self.squeeze(vjepa_out) 
+        squeezed_out = self.squeeze(vjepa_out)
         squeezed_out = self.act(squeezed_out)
         regressed = self.vit_decoder(squeezed_out)  # B, 16, 1, 252, 252
         # print(f'regressed output size: {regressed.shape}',flush=True)
