@@ -43,6 +43,8 @@ from src.models.vision_transformer import vit_large_rope
 
 from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
+from src.losses.crps_discrete_from_probs import crps_loss
+
 
 def vjepa_train_transform(sample):
     crop = RandomSuperResCrop(32, 32, 6)
@@ -167,6 +169,7 @@ def main(args, resume_preempt=False):
         "mse": F.mse_loss,
         "l1": F.l1_loss,
         "smooth_l1": F.smooth_l1_loss,
+        "crps": crps_loss,
     }
 
     loss_function = loss_fn_map.get(loss_fn, loss_fn_map["smooth_l1"])
