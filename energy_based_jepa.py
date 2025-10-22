@@ -70,7 +70,7 @@ def make_train_transform():
 
 # --
 log_timings = True
-log_freq = 128
+log_freq = 64
 # --
 
 _GLOBAL_SEED = 0
@@ -123,7 +123,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 128  # batch_size = accum_iter * batch_size
+    accum_iter = 64  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
