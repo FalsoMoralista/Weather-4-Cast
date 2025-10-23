@@ -287,6 +287,7 @@ def main(args, resume_preempt=False):
         num_frames=4,
     ).to(device)
 
+
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params / 1.0e9} B")
 
@@ -381,10 +382,7 @@ def main(args, resume_preempt=False):
                 probs = probs / probs.sum(dim=-1, keepdim=True)
                 F_pred = probs.cumsum(dim=-1)  # [B, K]
 
-                # CDF-verdade (degrau em x): T_k = 1{ y_k >= x }
-                T = (
-                    y_true_mm.unsqueeze(1).ge(bins.unsqueeze(0))
-                ).float()  # (bins.unsqueeze(0) <= y_true_mm.unsqueeze(1)).float()  # [B, K]
+                T = (bins.unsqueeze(0).ge(y_true_mm.unsqueeze(1))).float() # [B, K]
 
                 # Weights Δ_k (larguras)
                 delta = torch.diff(
@@ -396,19 +394,15 @@ def main(args, resume_preempt=False):
 
             def train_step():
                 x, y = load_imgs()
-                with torch.amp.autocast(
-                    "cuda", dtype=torch.bfloat16, enabled=use_bfloat16
-                ):
+
+
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
                     vjepa_logits = model(x)
 
                 probs = torch.softmax(vjepa_logits, dim=-1)
                 m = y.mean(dim=(2, 3))  # [B,16] média espacial por slot (mm/h)
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
-                loss = crps_discrete_from_probs(
-                    probs,
-                    y_true_mm,
-                    bins=torch.arange(0.0, 512.0 + 4, 4.0, device=device),
-                )
+                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 512.0 + 4, 4.0, device=device))
 
                 loss_val = loss.item()
 

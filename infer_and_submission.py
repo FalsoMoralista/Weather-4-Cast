@@ -56,8 +56,8 @@ def load_dinepa(epoch):
         num_frames=4,
         use_rope=True,
         embed_dim=1024,
-        num_heads=16,
-        depth=16,
+        num_heads=32,
+        depth=12,
         tubelet_size=1,
         ignore_patches=True,
         use_activation_checkpointing=False,
@@ -90,7 +90,7 @@ def load_dinepa(epoch):
             msg = model.downsample.load_state_dict(state_dict)
         else:
             msg = model.vjepa.load_state_dict(state_dict)
-        print(f"loaded layer {key} with msg: {msg}")
+        print(f"Loaded layer {key} with msg: {msg}")
 
         key = "vit_decoder"
         state_dict = {}
@@ -105,6 +105,7 @@ def load_dinepa(epoch):
                         "norm",
                         "time_expansion",
                         "conv_regression",
+                        "conv_bins",
                     ]
                 ):
                     state_dict[new_key] = v
@@ -126,8 +127,8 @@ args = parse_args()
 
 
 model_map = {
-    "dinepa": load_dinepa,
-    "vanilla": load_vanilla,
+    "dinepa_v2": load_dinepa,
+    "vanilla_vjepa_crps": load_vanilla,
 }
 
 model = model_map[args.model](args.epoch).to(device)
@@ -215,6 +216,7 @@ for year in years:
                     print(
                         "Model prediction:",
                         model_prediction.size(),
+                        model_prediction,
                         flush=True,
                     )
             submission_results = []
@@ -222,23 +224,15 @@ for year in years:
                 case_id = row["Case-id"]
                 slot_start = row["slot-start"]
 
-                idx_start = slot_start // 4
-                slot_result = model_prediction[idx_start]
+                slot_result = model_prediction[i]
                 print("Slot result shape:", slot_result.size(), flush=True)
-                print("Expected shape: (16, 129)", flush=True)
-                slot_result = slot_result.sum(dim=0)
-                print(
-                    "Slot result summed over timesteps shape:",
-                    slot_result.size(),
-                    flush=True,
-                )
-                slot_result = F.softmax(slot_result, dim=-1)
+                slot_result = F.softmax(slot_result, dim=0)
                 print("Softmax applied to slot result.", flush=True)
                 ecdf_per_timestep = torch.cumsum(slot_result, dim=-1)
                 print("ECDF per timestep shape:", ecdf_per_timestep.size(), flush=True)
 
-                for bin_index in range(ecdf_per_timestep.size(1)):
-                    submission_results.extend(
+                for bin_index in range(ecdf_per_timestep.size(0)):
+                    submission_results.append(
                         [
                             case_id,
                             bin_index * 4,
@@ -253,4 +247,4 @@ for year in years:
             output_filename = os.path.join(
                 output_dir, f"{args.model}/20{year}/{name}.test.cum4h.csv"
             )
-            output_df.to_csv(output_filename, index=False, header=False)
+            output_df.to_csv(output_filename, index=False, header=False, float_format='%.20f')
