@@ -5,7 +5,6 @@ import torchvision.transforms as T
 from src.models.vision_transformer import VisionTransformer
 from functools import partial
 
-
 class VisionTransformerDecoder(nn.Module):
     """
     Non auto-regressive pixel decoder.
@@ -23,13 +22,17 @@ class VisionTransformerDecoder(nn.Module):
         H_patches,
         W_patches,
         vjepa_size_in,
+        reduce_factor = 0.75,
         n_bins=129,
+        embed_dim = 1024,
         layer_norm=partial(nn.LayerNorm, eps=1e-6),
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.T = T
+        self.embed_dim = embed_dim
+        self.reduce_factor = reduce_factor
         self.H_patches = H_patches
         self.W_patches = W_patches
         self.num_target_channels = num_target_channels
@@ -39,9 +42,9 @@ class VisionTransformerDecoder(nn.Module):
         self.dim_out = dim_out
         self.layer_norm = layer_norm
 
-        self.squeeze_1 = nn.Linear(in_features=1024, out_features=768)
-        self.squeeze_2 = nn.Linear(in_features=768, out_features=self.dim_out)
-        self.mid_norm = self.layer_norm(768)
+        self.squeeze_1 = nn.Linear(in_features=embed_dim, out_features=self.reduce_factor * self.embed_dim)
+        self.squeeze_2 = nn.Linear(in_features=self.reduce_factor * self.embed_dim, out_features=self.dim_out)
+        self.mid_norm = self.layer_norm(self.reduce_factor * self.embed_dim)
         self.out_norm = self.layer_norm(self.dim_out)
         self.pre_norm = self.layer_norm(self.dim_out)
         self.batch_norm3d = nn.BatchNorm3d(1)
@@ -89,8 +92,9 @@ class VisionTransformerDecoder(nn.Module):
 
     def forward(self, x):
         B, _, _ = x.shape
+
         x = x.view(
-            B, self.T, self.vjepa_size_in * self.vjepa_size_in, 1024
+            B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.embed_dim
         )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
 
         x = self.squeeze_1(x)
@@ -104,11 +108,13 @@ class VisionTransformerDecoder(nn.Module):
         x = self.time_expansion(x)  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
         x = self.pre_norm(x)
         x = self.act(x)
+        
         x = x.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
             self.dim_out,
         )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
+        
         x = self.vit_decoder(
             x,
             T=self.num_target_channels,
@@ -131,37 +137,39 @@ class VisionTransformerDecoder(nn.Module):
         return x
 
 
-class ModelWrapper(nn.Module):
+
+
+class DecoderOnlyWrapper(nn.Module):
     def __init__(
         self,
         backbone,
-        vjepa,
         patch_size,
+        embed_dim=1024,
         dim_out=384,
-        num_heads=16,
+        num_heads=24,
         num_decoder_layers=4,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
         num_frames=4,
     ):
-        super(ModelWrapper, self).__init__()
+        super(DecoderOnlyWrapper, self).__init__()
         self.backbone = backbone
         self.backbone.eval()
         self.backbone.requires_grad_(False)
-        self.vjepa = vjepa
         self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
         self.num_target_channels = num_target_channels
         self.vjepa_size_in = vjepa_size_in
+        self.embed_dim=embed_dim
         self.vjepa_size_out = vjepa_size_out
         self.dim_out = dim_out
         self.act = nn.GELU()
 
-
         self.vit_decoder = VisionTransformerDecoder(
             T=num_frames,
             vjepa_size_in=vjepa_size_in,
+            embed_dim=embed_dim,
             dim_out=self.dim_out,
             num_layers=num_decoder_layers,
             num_heads=num_heads,
@@ -191,13 +199,8 @@ class ModelWrapper(nn.Module):
         tokens = tokens.reshape(
             B, T * tokens.size(1), tokens.size(2)
         ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
+    
 
-        vjepa_out = self.vjepa(
-            x=tokens,
-            tokenize=False,
-            T=T,
-            H_patches=H_patches,
-            W_patches=W_patches,
-        )
-        regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
-        return regressed
+        decoder_out = self.vit_decoder(x=tokens)
+        return decoder_out
+

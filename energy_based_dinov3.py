@@ -60,6 +60,7 @@ import time
 
 
 from src.models.model_wrapper import ModelWrapper
+from src.models.decoder_only_wrapper import DecoderOnlyWrapper
 
 
 from torchvision import transforms
@@ -70,7 +71,7 @@ from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
 # --
 log_timings = True
-log_freq = 64
+log_freq = 128
 checkpoint_freq = 1
 # --
 
@@ -89,7 +90,7 @@ def dino_train_transform(sample):
         output_patch_size=32,
         scale_factor=6,
         rain_sampling_p=0.75,
-        rain_sampling_threshold=0.2,
+        rain_sampling_threshold=0.3,
     )
     x, _ = crop(sample)
     x = resize(x)
@@ -133,7 +134,7 @@ def main(args, resume_preempt=False):
         torch.cuda.set_device(device)
 
     # -- # Gradient accumulation
-    accum_iter = 64  # batch_size = accum_iter * batch_size
+    accum_iter = 128  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -248,9 +249,9 @@ def main(args, resume_preempt=False):
         patch_size=16,
         mlp_ratio=4,
         num_frames=4,
-        use_rope=True,
-        embed_dim=1024,
-        num_heads=32,
+        use_rope=True, 
+        embed_dim=1024, # 1024
+        num_heads=16, # 32
         depth=12,
         tubelet_size=1,
         ignore_patches=True,
@@ -258,10 +259,10 @@ def main(args, resume_preempt=False):
     )
     vjepa.patch_embed = nn.Identity()
 
-    vjepa = vjepa.to(device)
+    #vjepa = vjepa.to(device)
 
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
-    print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
+    #print(f"V-jepa Total parameters: {total_params / 1.0e6} M")
 
     dinov3 = torch.hub.load(
         "../dinov3", "dinov3_vitl16", source="local", weights=load_path
@@ -274,22 +275,51 @@ def main(args, resume_preempt=False):
 
     # print("Dinov3 Model:", dinov3)
 
-    model = ModelWrapper(
-        backbone=dinov3,
-        vjepa=vjepa,
-        patch_size=16,
-        dim_out=384,
-        num_heads=32,
-        num_decoder_layers=8,
-        num_target_channels=16,
-        vjepa_size_in=14,
-        vjepa_size_out=18,
-        num_frames=4,
-    ).to(device)
+    if not tag == 'constrained_dinepa':
+        model = DecoderOnlyWrapper(
+            backbone=dinov3,
+            patch_size=16,
+            embed_dim=1024,
+            dim_out=384,
+            num_heads=32,
+            num_decoder_layers=8,
+            num_target_channels=16,
+            vjepa_size_in=14,
+            vjepa_size_out=18,
+            num_frames=4,
+        ).to(device)
+
+        
+    else:
+        model = ModelWrapper(
+            backbone=dinov3,
+            vjepa=vjepa,
+            patch_size=16,
+            dim_out=384,
+            num_heads=16,
+            num_decoder_layers=6,
+            num_target_channels=16,
+            vjepa_size_in=14,
+            vjepa_size_out=18,
+            num_frames=4,
+        ).to(device)
+
+
+    #model = ModelWrapperV2(
+    #    backbone=dinov3,
+    #    patch_size=16,
+    #    dim_out=1024,
+    #    num_heads=32, # 32
+    #    num_decoder_layers=8,
+    #    num_target_channels=16,
+    #    vjepa_size_in=14,
+    #    vjepa_size_out=18,
+    #    num_frames=4,
+    #).to(device)
 
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Model Total parameters: {total_params / 1.0e9} B")
+    print(f"Model Total parameters: {total_params / 1.0e6} M")
 
     allocated_bytes = torch.cuda.memory_allocated()
     allocated_gb = allocated_bytes / (1024**3)
@@ -297,6 +327,7 @@ def main(args, resume_preempt=False):
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_vjepa_opt(
+        model_type='encoder-decoder',
         encoder=model,
         wd=wd,  # TODO
         final_wd=final_wd,
@@ -464,25 +495,9 @@ def main(args, resume_preempt=False):
                         )
                     )
 
-                    # if grad_stats is not None:
-                    #    logger.info(
-                    #        "[%d, %d] grad_stats: [%.2e %.2e] (%.2e, %.2e)"
-                    #        % (
-                    #            epoch + 1,
-                    #            itr,
-                    #            grad_stats.first_layer,
-                    #            grad_stats.last_layer,
-                    #            grad_stats.min,
-                    #            grad_stats.max,
-                    #        )
-                    #    )
-
             log_stats()
         # End of epoch
 
-        # Warning: Enabling distributed evaluation with an eval dataset not divisible by process number
-        # will slightly alter validation results as extra duplicate entries are added to achieve equal
-        # num of samples per-process.
 
         @torch.no_grad()
         def evaluate():
@@ -521,12 +536,6 @@ def main(args, resume_preempt=False):
         model.train(True)
         model.backbone.eval()
         model.backbone.requires_grad_(False)
-
-        if epoch + 1 == 1:
-            params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-            print(
-                f"Model Total parameters: {params / 1.0e9} == {total_params / 1.0e9}? "
-            )
 
         stats_logger.log(
             epoch + 1,

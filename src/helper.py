@@ -212,6 +212,7 @@ def init_vjepa_opt(
     ref_lr,
     warmup,
     num_epochs,
+    model_type ='encoder-decoder',
     wd=1e-6,
     final_wd=1e-6,
     final_lr=0.0,
@@ -221,18 +222,11 @@ def init_vjepa_opt(
     eps=1e-8,
     zero_init_bias_wd=True,
 ):
-    # param_groups = [
-    #     {"params": (p for n, p in encoder.named_parameters() if ("bias" not in n) and (len(p.shape) != 1))},
-    #     {
-    #         "params": (p for n, p in encoder.named_parameters() if ("bias" in n) or (len(p.shape) == 1)),
-    #         "WD_exclude": zero_init_bias_wd,
-    #         "weight_decay": 0,
-    #     }
-    # ]
 
-    model_parameters = list(encoder.vjepa.named_parameters()) + list(
-        encoder.vit_decoder.named_parameters()
-    )
+    if model_type == 'encoder-decoder':
+        model_parameters = list(encoder.vjepa.named_parameters()) + list(encoder.vit_decoder.named_parameters()) + list(encoder.downsample.named_parameters())
+    else:
+        model_parameters = list(encoder.vit_decoder.named_parameters()) + list(encoder.downsample.named_parameters())
 
     #print("model_parameters", model_parameters)
 
