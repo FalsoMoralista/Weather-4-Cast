@@ -61,10 +61,10 @@ optimization:
   - 0.999
   epochs: 30
   final_lr: 1.0e-05 # Default: 1e-6
-  final_weight_decay: 0.6  
+  final_weight_decay: 0.5  
   ipe_scale: 1.0
-  lr: 7.5e-05 # 1e-4
-  start_lr: 1.0e-06 # 
+  lr: 3.0e-04 # 1e-4
+  start_lr: 1.0e-05 # 
   warmup: 5
   weight_decay: 0.2 # (default: e-2)
   label_smoothing: 0.1

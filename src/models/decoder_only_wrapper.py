@@ -58,7 +58,6 @@ class VisionTransformerDecoder(nn.Module):
             padding=1,
         )
 
-        # self.conv_regression = nn.ConvTranspose2d(in_channels=1024, out_channels=1, kernel_size=18, stride=18)
         self.conv_regression = nn.ConvTranspose2d(
             in_channels=self.dim_out,
             out_channels=1,
@@ -92,7 +91,14 @@ class VisionTransformerDecoder(nn.Module):
 
     def forward(self, x):
         B, _, _ = x.shape
-
+        x = self.vit_decoder(
+            x,
+            T=self.num_target_channels,
+            tokenize=False,
+            H_patches=self.H_patches,
+            W_patches=self.W_patches,
+        )
+        
         x = x.view(
             B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.embed_dim
         )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
@@ -106,22 +112,9 @@ class VisionTransformerDecoder(nn.Module):
         x = self.out_norm(x)
 
         x = self.time_expansion(x)  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
-        x = self.pre_norm(x)
         x = self.act(x)
+        x = self.pre_norm(x)
         
-        x = x.view(
-            -1,
-            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out,
-        )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
-        
-        x = self.vit_decoder(
-            x,
-            T=self.num_target_channels,
-            tokenize=False,
-            H_patches=self.H_patches,
-            W_patches=self.W_patches,
-        )
         x = x.view(
             B * self.num_target_channels,
             self.dim_out,
@@ -135,8 +128,6 @@ class VisionTransformerDecoder(nn.Module):
         x = self.batch_norm3d(x)
         x = self.conv_bins(x).squeeze(2, 3, 4)        
         return x
-
-
 
 
 class DecoderOnlyWrapper(nn.Module):

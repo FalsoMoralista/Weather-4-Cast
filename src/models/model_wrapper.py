@@ -23,7 +23,7 @@ class VisionTransformerDecoder(nn.Module):
         H_patches,
         W_patches,
         vjepa_size_in,
-        n_bins=129,
+        n_bins=513,
         layer_norm=partial(nn.LayerNorm, eps=1e-6),
         *args,
         **kwargs,
@@ -102,8 +102,9 @@ class VisionTransformerDecoder(nn.Module):
         x = self.out_norm(x)
 
         x = self.time_expansion(x)  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
-        x = self.pre_norm(x)
         x = self.act(x)
+        x = self.pre_norm(x)
+        
         x = x.view(
             -1,
             self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,

@@ -49,6 +49,9 @@ def load_dinepa(epoch):
         "../dinov3", "dinov3_vitl16", source="local", weights=dino_path
     ).to(device)
     dinov3 = torch.compile(dinov3, mode="reduce-overhead")
+
+    tag = 'constrained_dinepa'
+    
     vjepa = VisionTransformer(
         img_size=(224, 224),
         patch_size=16,
@@ -56,7 +59,7 @@ def load_dinepa(epoch):
         num_frames=4,
         use_rope=True,
         embed_dim=1024,
-        num_heads=32,
+        num_heads=16,
         depth=12,
         tubelet_size=1,
         ignore_patches=True,
@@ -70,16 +73,17 @@ def load_dinepa(epoch):
         patch_size=16,
         dim_out=384,
         num_heads=16,
-        num_decoder_layers=8,
+        num_decoder_layers=6,
         num_target_channels=16,
         vjepa_size_in=14,
         vjepa_size_out=18,
         num_frames=4,
     )
-    tag = "constrained_dinepa"
+    
     r_path = "dinepa_v2/{}-ep{}.pth.tar".format(tag, epoch)
+    print('Loading checkpoint from:', r_path)
     checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
-
+    print('checkpoint keys:', checkpoint["model"].keys())
     for idx, key in enumerate(["downsample", "vjepa"]):
         state_dict = {
             k.replace(key + ".", ""): v
@@ -89,7 +93,8 @@ def load_dinepa(epoch):
         if idx == 0:
             msg = model.downsample.load_state_dict(state_dict)
         else:
-            msg = model.vjepa.load_state_dict(state_dict)
+            if tag == "constrained_dinepa":
+                msg = model.vjepa.load_state_dict(state_dict)
         print(f"Loaded layer {key} with msg: {msg}")
 
         key = "vit_decoder"
@@ -106,13 +111,17 @@ def load_dinepa(epoch):
                         "time_expansion",
                         "conv_regression",
                         "conv_bins",
+                        "squeeze_1",
+                        "squeeze_2"
                     ]
                 ):
                     state_dict[new_key] = v
 
         msg = model.vit_decoder.load_state_dict(state_dict)
+        print(f"Loaded layer {key} with msg: {msg}")
 
     model.backbone = dinov3
+    print('Model:', model)
     model.to(device)
     model.eval()
     del checkpoint

@@ -409,13 +409,11 @@ def main(args, resume_preempt=False):
                 y_true_mm: [B] (alvo em mm, acumulado 4h)
                 bins: [K]      (valores y_k crescentes, em mm)
                 """
-                # CDF prevista
-                probs = probs / probs.sum(dim=-1, keepdim=True)
                 F_pred = probs.cumsum(dim=-1)  # [B, K]
 
                 T = (bins.unsqueeze(0).ge(y_true_mm.unsqueeze(1))).float() # [B, K]
 
-                # Weights Δ_k (larguras)
+                # Weights Δ_k (width)
                 delta = torch.diff(
                     bins, prepend=bins[:1]
                 )  # useless as bins have uniform width
@@ -426,14 +424,13 @@ def main(args, resume_preempt=False):
             def train_step():
                 x, y = load_imgs()
 
-
                 with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=use_bfloat16):
                     vjepa_logits = model(x)
 
                 probs = torch.softmax(vjepa_logits, dim=-1)
                 m = y.mean(dim=(2, 3))  # [B,16] média espacial por slot (mm/h)
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
-                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 512.0 + 4, 4.0, device=device))
+                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 128.0 + 0.25, 0.25, device=device))
 
                 loss_val = loss.item()
 
