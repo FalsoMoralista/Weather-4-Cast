@@ -50,8 +50,8 @@ def load_dinepa(epoch):
     ).to(device)
     dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
-    tag = 'constrained_dinepa'
-    
+    tag = "constrained_dinepa"
+
     vjepa = VisionTransformer(
         img_size=(224, 224),
         patch_size=16,
@@ -79,11 +79,11 @@ def load_dinepa(epoch):
         vjepa_size_out=18,
         num_frames=4,
     )
-    
+
     r_path = "dinepa_v2/{}-ep{}.pth.tar".format(tag, epoch)
-    print('Loading checkpoint from:', r_path)
+    print("Loading checkpoint from:", r_path)
     checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
-    print('checkpoint keys:', checkpoint["model"].keys())
+    print("checkpoint keys:", checkpoint["model"].keys())
     for idx, key in enumerate(["downsample", "vjepa"]):
         state_dict = {
             k.replace(key + ".", ""): v
@@ -112,7 +112,7 @@ def load_dinepa(epoch):
                         "conv_regression",
                         "conv_bins",
                         "squeeze_1",
-                        "squeeze_2"
+                        "squeeze_2",
                     ]
                 ):
                     state_dict[new_key] = v
@@ -121,7 +121,7 @@ def load_dinepa(epoch):
         print(f"Loaded layer {key} with msg: {msg}")
 
     model.backbone = dinov3
-    print('Model:', model)
+    print("Model:", model)
     model.to(device)
     model.eval()
     del checkpoint
@@ -130,6 +130,7 @@ def load_dinepa(epoch):
 
 def load_vanilla_crps(epoch):
     return model
+
 
 def load_vanilla_emd(epoch):
     return model
@@ -141,7 +142,7 @@ args = parse_args()
 model_map = {
     "dinepa_v2": load_dinepa,
     "vanilla_vjepa_crps": load_vanilla_crps,
-    "vanilla_vjepa_emd": load_vanilla_emd
+    "vanilla_vjepa_emd": load_vanilla_emd,
 }
 
 model = model_map[args.model](args.epoch).to(device)
@@ -260,4 +261,6 @@ for year in years:
             output_filename = os.path.join(
                 output_dir, f"{args.model}/20{year}/{name}.test.cum4h.csv"
             )
-            output_df.to_csv(output_filename, index=False, header=False, float_format='%.20f')
+            output_df.to_csv(
+                output_filename, index=False, header=False, float_format="%.20f"
+            )
