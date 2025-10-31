@@ -292,10 +292,11 @@ def main(args, resume_preempt=False):
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model Total parameters: {total_params / 1.0e9} B")
+    print(f"Model total parameters: {total_params}")
 
     allocated_bytes = torch.cuda.memory_allocated()
     allocated_gb = allocated_bytes / (1024**3)
-    print("allocated mem from model setup:", allocated_gb, "gb")
+    print("Allocated mem from model setup:", allocated_gb, "gb")
 
     # -- init optimizer and scheduler
     optimizer, scaler, scheduler, wd_scheduler = init_vjepa_opt(
