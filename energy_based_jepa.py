@@ -266,65 +266,17 @@ def main(args, resume_preempt=False):
     ipe = len(supervised_loader_train)
     print("Training dataset, length:", ipe * batch_size)
 
-    vjepa = vit_large_rope(
-        patch_size=2,
+    vjepa = vit_small(
         img_size=(32, 32),
-        # mlp_ratio=4,
-        num_frames=4,
-        # use_rope=True,
-        # embed_dim=1280,
-        # num_heads=16,
-        # depth=16,
-        tubelet_size=1,
-        # ignore_patches=True,
-        use_activation_checkpointing=False,
         in_chans=11,
+        patch_size=2,
+        num_frames=4,
+        tubelet_size=1,
+        use_activation_checkpointing=False,
     )
-    jepa_checkpoint_path = (
-        "/home/lucianodourado/weather-4-cast/jepa_checkpoints/vjepa_vitl.pt"
-    )
-    vjepa_checkpoint = torch.load(jepa_checkpoint_path)
-    encoder_checkpoint = remove_prefix(vjepa_checkpoint["encoder"], "module.backbone.")
-    encoder_checkpoint = remove_with_name(encoder_checkpoint, "patch_embed")
-    msg = vjepa.load_state_dict(encoder_checkpoint, strict=False)
-    print("Loading checkpoint with message:", msg)
-    # vjepa.patch_embed = PatchEmbed3D(
-    #     patch_size=16,
-    #     tubelet_size=1,
-    #     in_chans=11,
-    #     embed_dim=1280,
-    # )
-    # for name, p in vjepa.named_parameters():
-    #     if "patch_embed" in name:
-    #         continue
-    #     p.requires_grad = False
     vjepa = vjepa.to(device)
     total_params = sum(p.numel() for p in vjepa.parameters() if p.requires_grad)
     print(f"V-jepa Total parameters: {total_params / 1.0e9} B")
-
-    # dinov3 = torch.hub.load(
-    #     "../dinov3", "dinov3_vitl16", source="local", weights=load_path
-    # ).to(device)
-
-    # for p in dinov3.parameters():
-    #     p.requires_grad = False
-
-    # dinov3 = torch.compile(dinov3, mode="reduce-overhead")
-
-    # print("Dinov3 Model:", dinov3)
-
-    # model = ModelWrapper(
-    #     backbone=dinov3,
-    #     vjepa=vjepa,
-    #     patch_size=16,
-    #     dim_out=1024,
-    #     num_heads=16,
-    #     num_decoder_layers=8,
-    #     num_target_channels=16,
-    #     vjepa_size_in=14,
-    #     vjepa_size_out=18,
-    #     num_frames=4,
-    # ).to(device)
 
     model = ModelWrapperV2(
         vjepa=vjepa,
@@ -336,7 +288,7 @@ def main(args, resume_preempt=False):
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=129,
+        n_bins=513,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -364,13 +316,7 @@ def main(args, resume_preempt=False):
     # model = DistributedDataParallel(model, static_graph=True)
 
     def save_checkpoint(epoch):
-        model_state_dict = {
-            k: v
-            for k, v in model.state_dict().items()
-            if not k.startswith(
-                "backbone"
-            )  # Remove pre-trained backbone from checkpoint
-        }
+        model_state_dict = model.state_dict()
 
         save_dict = {
             "model": model_state_dict,
@@ -397,7 +343,7 @@ def main(args, resume_preempt=False):
         target_encoder, optimizer, scaler, start_epoch = load_DC_checkpoint(
             device=device,
             r_path=load_path,
-            target_encoder=target_encoder,
+            target_encoder=None,
             opt=optimizer,
             scaler=scaler,
         )
@@ -501,19 +447,6 @@ def main(args, resume_preempt=False):
                         )
                     )
 
-                    # if grad_stats is not None:
-                    #    logger.info(
-                    #        "[%d, %d] grad_stats: [%.2e %.2e] (%.2e, %.2e)"
-                    #        % (
-                    #            epoch + 1,
-                    #            itr,
-                    #            grad_stats.first_layer,
-                    #            grad_stats.last_layer,
-                    #            grad_stats.min,
-                    #            grad_stats.max,
-                    #        )
-                    #    )
-
             log_stats()
         # End of epoch
 
@@ -541,10 +474,7 @@ def main(args, resume_preempt=False):
                     with torch.inference_mode():
                         reconstructed_matrix = model(images)
                     mae = loss_function(reconstructed_matrix, labels)
-                # mae = F.smooth_l1_loss(
-                #     reconstructed_matrix, labels
-                # )
-                # MAE(reconstructed_matrix, labels)
+
                 test_mae.update(mae)
 
             total_test_loss_meter.update(test_mae.avg)
@@ -557,8 +487,6 @@ def main(args, resume_preempt=False):
         vtime = gpu_timer(evaluate)
 
         model.train(True)
-        # model.backbone.eval()
-        # model.backbone.requires_grad_(False)
 
         if epoch + 1 == 1:
             params = sum(p.numel() for p in model.parameters() if p.requires_grad)
