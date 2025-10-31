@@ -158,7 +158,7 @@ def load_vanilla_crps(epoch):
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=513,
+        n_bins=3201,
     )
 
     tag = "vjepa2"
@@ -189,7 +189,7 @@ def load_vanilla_emd(epoch):
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=513,
+        n_bins=3201,
     )
 
     tag = "vjepa2"
@@ -334,11 +334,13 @@ for year in years:
                 ecdf_per_timestep = torch.cumsum(slot_result, dim=-1)
                 print("ECDF per timestep shape:", ecdf_per_timestep.size(), flush=True)
 
+                eps = 5.0e-3
+                bin_index_list = bins=torch.arange(0.0, 16 + eps, eps)
                 for bin_index in range(ecdf_per_timestep.size(0)):
                     submission_results.append(
                         [
                             case_id,
-                            bin_index * 0.25,
+                            bin_index_list[bin_index].item(),
                             ecdf_per_timestep[bin_index].item(),
                         ]
                     )
@@ -351,5 +353,5 @@ for year in years:
                 output_dir, f"{args.model}/20{year}/{name}.test.cum4h.csv"
             )
             output_df.to_csv(
-                output_filename, index=False, header=False, float_format="%.20f"
+                output_filename, index=False, header=False, float_format="%.5f"
             )

@@ -92,17 +92,21 @@ def dino_train_transform(sample):
         rain_sampling_p=0.75,
         rain_sampling_threshold=0.3,
     )
-    x, _ = crop(sample)
+    x, y = sample
+    to_transform = (x, y, 0)
+    x, y, _ = crop(to_transform)
     x = resize(x)
-    return (x, _)
+    return (x, y)
 
 
 def dino_val_transform(sample):
     resize = transforms.Resize((224, 224))
     crop = CenterSuperResCrop(32, 32, 6, 16)
-    x, _ = crop(sample)
+    x, y = sample
+    to_transform = (x, y, 0)
+    x, y, _ = crop(to_transform)
     x = resize(x)
-    return (x, _)
+    return (x, y)
 
 
 def make_val_transform():
@@ -372,7 +376,7 @@ def main(args, resume_preempt=False):
 
     # TODO: ADJUST THIS later!
     if resume_epoch != 0:
-        model = reload_checkpoint(model, resume_epoch, device)
+        model = reload_checkpoint(model, tag, resume_epoch, device)
         num_steps_to_advance = resume_epoch * (ipe // accum_iter)
         for _ in range(num_steps_to_advance):
             new_lr = scheduler.step()
@@ -430,7 +434,9 @@ def main(args, resume_preempt=False):
                 probs = torch.softmax(vjepa_logits, dim=-1)
                 m = y.mean(dim=(2, 3))  # [B,16] média espacial por slot (mm/h)
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
-                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 128.0 + 0.25, 0.25, device=device))
+                eps = 5.0e-3
+
+                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 16 + eps, eps, device=device))
 
                 loss_val = loss.item()
 
@@ -515,10 +521,12 @@ def main(args, resume_preempt=False):
                 probs = torch.softmax(model_logits, dim=-1)
                 m = labels.mean(dim=(2, 3))
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
+                
+                eps = 5.0e-3 
                 test_loss = crps_discrete_from_probs(
                     probs,
                     y_true_mm,
-                    bins=torch.arange(0.0, 512.0 + 4, 4.0, device=device),
+                    bins=torch.arange(0.0, 16 + eps, eps, device=device),
                 )
 
             total_test_loss_meter.update(test_loss)

@@ -41,7 +41,7 @@ class VisionTransformerDecoder(nn.Module):
 
         self.dim_out = dim_out
 
-        self.act = nn.ReLU()
+        self.act = nn.GELU()
 
         self.time_expansion = nn.Conv2d(
             self.T,
@@ -78,7 +78,7 @@ class VisionTransformerDecoder(nn.Module):
                 stride=1,
                 padding=1,
             ),
-            nn.ReLU(),
+            nn.GELU(),
         )
 
         self.upscale_norm = nn.LayerNorm(self.dim_out)

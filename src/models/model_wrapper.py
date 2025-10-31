@@ -23,7 +23,7 @@ class VisionTransformerDecoder(nn.Module):
         H_patches,
         W_patches,
         vjepa_size_in,
-        n_bins=513,
+        n_bins=3201,
         layer_norm=partial(nn.LayerNorm, eps=1e-6),
         *args,
         **kwargs,

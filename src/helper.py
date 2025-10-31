@@ -271,9 +271,9 @@ def init_vjepa_opt(
     return optimizer, scaler, scheduler, wd_scheduler
 
 
-def reload_checkpoint(model, epoch, device):
+def reload_checkpoint(model, tag, epoch, device):
     try:
-        r_path = '../../rtcalumby/adam/luciano/LifeCLEFPlant2022/logs/PlantNet300k_exp80/jepa-ep{}.pth.tar'.format(epoch)
+        r_path = 'dinepa_v2/{}-ep{}.pth.tar'.format(tag,epoch)
         checkpoint = torch.load(r_path, map_location=torch.device('cpu'))
 
         for idx, key in enumerate(['downsample', 'vjepa']):
@@ -293,7 +293,7 @@ def reload_checkpoint(model, epoch, device):
         for k, v in checkpoint['model'].items():
             if k.startswith(key):
                 new_key = k.replace('vit_decoder.', '', 1)
-                if any(name in new_key for name in ['patch_embed', 'blocks', 'norm', 'time_expansion', 'conv_regression']):
+                if any(name in new_key for name in ['patch_embed', 'blocks', 'norm', 'time_expansion', 'conv', 'squeeze']):
                     state_dict[new_key] = v
 
         msg = model.vit_decoder.load_state_dict(state_dict)

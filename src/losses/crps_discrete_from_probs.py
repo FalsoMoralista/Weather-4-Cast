@@ -26,5 +26,5 @@ def crps_loss(y_hat: torch.Tensor, y: torch.Tensor):
     return crps_discrete_from_probs(
         probs,
         y_true_mm,
-        bins=torch.linspace(0.0, 128.0, 513, device=y.device),
+        bins=torch.linspace(0.0, 16.0, 3201, device=y.device),
     )

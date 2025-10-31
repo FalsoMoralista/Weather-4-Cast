@@ -48,16 +48,20 @@ from src.losses.emd import EMDLoss
 
 def vjepa_train_transform(sample):
     crop = RandomSuperResCrop(32, 32, 6, 0.7, 0.3)
-    x, _ = crop(sample)
+    x, y = sample
+    to_crop = (x, y, 0)
+    x, y, _ = crop(to_crop)
     x = x.permute(1, 0, 2, 3)
-    return (x, _)
+    return (x, y)
 
 
 def vjepa_val_transform(sample):
     crop = CenterSuperResCrop(32, 32, 6, 16)
-    x, _ = crop(sample)
+    x, y = sample
+    to_crop = (x, y, 0)
+    x, y, _ = crop(to_crop)
     x = x.permute(1, 0, 2, 3)
-    return (x, _)
+    return (x, y)
 
 
 def make_val_transform():
@@ -123,7 +127,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 32  # batch_size = accum_iter * batch_size
+    accum_iter = 64  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -287,7 +291,7 @@ def main(args, resume_preempt=False):
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=513,
+        n_bins=3201,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
