@@ -34,7 +34,6 @@ from src.utils.distributed import init_distributed
 from src.utils.logging import CSVLogger, gpu_timer, AverageMeter
 
 from src.datasets.SatDataset import make_sat_dataset
-from utils.checkpoint import remove_prefix, remove_with_name
 
 from src.helper import load_DC_checkpoint, init_vjepa_opt
 
