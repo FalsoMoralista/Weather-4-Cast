@@ -39,11 +39,12 @@ from utils.checkpoint import remove_prefix, remove_with_name
 from src.helper import load_DC_checkpoint, init_vjepa_opt
 
 from src.models.model_v2 import ModelWrapperV2
-from src.models.vision_transformer import vit_large_rope
+from src.models.vision_transformer import vit_small
 
 from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
 from src.losses.crps_discrete_from_probs import crps_loss
+from src.losses.emd import EMDLoss
 
 
 def vjepa_train_transform(sample):
@@ -170,6 +171,7 @@ def main(args, resume_preempt=False):
         "l1": F.l1_loss,
         "smooth_l1": F.smooth_l1_loss,
         "crps": crps_loss,
+        "emd": EMDLoss(),
     }
 
     loss_function = loss_fn_map.get(loss_fn, loss_fn_map["smooth_l1"])
