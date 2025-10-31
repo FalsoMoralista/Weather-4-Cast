@@ -33,6 +33,10 @@ def dinepa_infer_transform(sample):
     return ()
 
 
+def vanilla_vjepa_transform(sample):
+    return sample.permute(0, 2, 1, 3, 4)
+
+
 def parse_args():
     parser = ArgumentParser(description="Inference and Submission Script")
     parser.add_argument(
@@ -232,6 +236,9 @@ for year in years:
             InferenceDatasetV2.ROOT,
             type=type,
             input_size=(252, 252) if args.model == "dinepa_v2" else None,
+            transform=vanilla_vjepa_transform
+            if "vanilla_vjepa" in args.model
+            else None,
         )
 
         print("Dataset length:", len(dataset))
