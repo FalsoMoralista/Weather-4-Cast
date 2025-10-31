@@ -231,7 +231,7 @@ for year in years:
         dataset = InferenceDatasetV2(
             InferenceDatasetV2.ROOT,
             type=type,
-            input_size=(252, 252),
+            input_size=(252, 252) if model_map == "dinepa_v2" else None,
         )
 
         print("Dataset length:", len(dataset))
