@@ -37,6 +37,7 @@ class VisionTransformerDecoder(nn.Module):
         self.n_bins = n_bins
         self.image_size = image_size
         self.vjepa_size_in = vjepa_size_in
+        self.num_patches = self.H_patches * self.W_patches
 
         self.dim_out = dim_out
 
@@ -113,15 +114,15 @@ class VisionTransformerDecoder(nn.Module):
         z = self.vit_decoder(
             z,
             self.num_target_channels,
-            H_patches=self.patches,
-            W_patches=self.patches,
+            H_patches=self.H_patches,
+            W_patches=self.W_patches,
             tokenize=False,
         )
         z = z.view(
             B,
             self.num_target_channels,
-            self.patches,
-            self.patches,
+            self.H_patches,
+            self.W_patches,
             self.dim_out,
         )
         z = z.permute(0, 1, 4, 2, 3)
@@ -179,6 +180,7 @@ class ModelWrapperV2(nn.Module):
 
     def forward(self, x):
         B, C, T, H, W = x.shape  # (B, T=4, 11, 32, 32)
+        x = x.permute(0, 2, 1, 3, 4)  # B, C, T, H, W
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         vjepa_out = self.vjepa(
