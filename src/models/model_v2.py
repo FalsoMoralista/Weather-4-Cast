@@ -23,7 +23,7 @@ class VisionTransformerDecoder(nn.Module):
         W_patches,
         vjepa_size_in,
         image_size=32,
-        n_bins=129,
+        n_bins=513,
         patch_size=2,
         *args,
         **kwargs,
@@ -40,35 +40,23 @@ class VisionTransformerDecoder(nn.Module):
 
         self.dim_out = dim_out
 
-        self.act = nn.GELU()
+        self.act = nn.ReLU()
 
         self.time_expansion = nn.Conv2d(
-            T,
-            num_target_channels,
+            self.num_frames,
+            self.num_target_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )
 
-        self.conv_regression = nn.ConvTranspose2d(
-            in_channels=dim_out,
-            out_channels=1,
-            kernel_size=17,
-            stride=1,
-        )
-
-        self.conv_bins = nn.Conv3d(
-            in_channels=1,
-            out_channels=self.n_bins,
-            kernel_size=(1, self.image_size, self.image_size),
-            stride=self.image_size,
-        )
+        self.expansion_norm = nn.LayerNorm(self.in_dim)
 
         self.vit_decoder = VisionTransformer(
             img_size=(32, 32),
             patch_size=self.patch_size,
             in_chans=num_target_channels,  # 16
-            embed_dim=dim_out,  # 1024
+            embed_dim=dim_out,
             depth=num_layers,
             num_heads=num_heads,
             mlp_ratio=4,
@@ -80,37 +68,76 @@ class VisionTransformerDecoder(nn.Module):
             use_activation_checkpointing=False,
         )
 
-    def forward(self, x):
-        B, _, _ = x.shape
-        x = x.view(
-            B, self.T, self.vjepa_size_in * self.vjepa_size_in, self.dim_out
-        )  # From  (B, 4*196, 2048) to (B, 4, 196, 2048)
-        x = self.time_expansion(
-            x
-        )  # From (B, 4, 196, 1024) into (B, 16, 196, 1024) i.e., time axis expansion
-        x = self.act(x)
-        x = x.view(
-            -1,
-            self.num_target_channels * self.vjepa_size_in * self.vjepa_size_in,
-            self.dim_out,
-        )  # From (B, 16, 196, 1024) to (B, 16*196, 1024)
-        x = self.vit_decoder(
-            x,
-            T=self.num_target_channels,
-            tokenize=False,
-            H_patches=self.H_patches,
-            W_patches=self.W_patches,
+        self.upscale = nn.Sequential(
+            nn.Upsample(scale_factor=(1, 2, 2), mode="trilinear", align_corners=False),
+            nn.Conv3d(
+                in_channels=self.num_target_channels,
+                out_channels=self.num_target_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+            ),
+            nn.ReLU(),
         )
-        x = x.view(
-            B * self.num_target_channels,
-            self.dim_out,
-            self.vjepa_size_in,
-            self.vjepa_size_in,
-        )  # From (B, 16, 196, 1024) to (B*16, 1024, 14, 14)
-        x = self.conv_regression(x)
-        x = self.act(x).view(B, 1, self.num_target_channels, x.size(-2), x.size(-1))
-        x = self.conv_bins(x).squeeze(2, 3, 4)  # B, 16, 129
-        return x
+
+        self.upscale_norm = nn.LayerNorm(self.out_dim)
+
+        self.conv_regression = nn.Conv3d(
+            in_channels=self.out_dim,
+            out_channels=1,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
+
+        self.regression_norm = nn.BatchNorm2d(self.num_target_channels)
+
+        self.conv_bins = nn.Conv2d(
+            in_channels=self.num_target_channels,
+            out_channels=self.n_bins,
+            kernel_size=(self.image_size, self.image_size),
+            stride=1,
+        )
+
+    def forward(self, z):
+        B = z.shape[0]
+        z = z.view(B, self.num_frames, self.num_patches, self.in_dim)
+        z = self.time_expansion(z)
+        z = self.act(z)
+        z = self.expansion_norm(z)
+        z = z.view(
+            B,
+            self.num_target_channels * self.num_patches,
+            self.in_dim,
+        )
+        z = self.vit_decoder(
+            z,
+            self.num_target_channels,
+            H_patches=self.patches,
+            W_patches=self.patches,
+            tokenize=False,
+        )
+        z = z.view(
+            B,
+            self.num_target_channels,
+            self.patches,
+            self.patches,
+            self.in_dim,
+        )
+        z = z.permute(0, 1, 4, 2, 3)
+        z = self.upscale(z)
+        z = z.permute(0, 1, 3, 4, 2)
+        z = self.upscale_norm(z)
+        z = z.permute(0, 4, 1, 2, 3)
+        z = self.conv_regression(z)
+        z = z.permute(0, 2, 3, 4, 1)
+        z = z.squeeze(-1)
+        z = self.act(z)
+        z = self.regression_norm(z)
+        z = self.conv_bins(z)
+        z = z.squeeze((-1, -2))
+        z = self.act(z)
+        return z
 
 
 class ModelWrapperV2(nn.Module):
@@ -161,5 +188,5 @@ class ModelWrapperV2(nn.Module):
             H_patches=H_patches,
             W_patches=W_patches,
         )
-        regressed = self.vit_decoder(vjepa_out)  # B, 16, 129
+        regressed = self.vit_decoder(vjepa_out)  # B, 16, 513
         return regressed
