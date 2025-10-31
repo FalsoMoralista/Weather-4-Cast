@@ -10,7 +10,7 @@ class EMDLoss(torch.nn.Module):
         input = input.cumsum(dim=-1)
         m = target.mean(dim=(2, 3))
         y_true_mm = m.sum(dim=1) / 4.0
-        bins = torch.linspace(0.0, 128.0, 100, device=y_true_mm.device)
+        bins = torch.linspace(0.0, 128.0, 513, device=y_true_mm.device)
         T = (bins.unsqueeze(0).ge(y_true_mm.unsqueeze(1))).float()
         emd = torch.sum(torch.abs(input - T))
         return emd
