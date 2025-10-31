@@ -311,6 +311,7 @@ def main(args, resume_preempt=False):
         num_epochs=num_epochs,
         ipe_scale=ipe_scale,
         use_bfloat16=use_bfloat16,
+        model_type="vanilla_vjepa",
     )
 
     # model = DistributedDataParallel(model, static_graph=True)
