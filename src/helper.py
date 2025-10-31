@@ -225,6 +225,12 @@ def init_vjepa_opt(
 
     if model_type == 'encoder-decoder':
         model_parameters = list(encoder.vjepa.named_parameters()) + list(encoder.vit_decoder.named_parameters()) + list(encoder.downsample.named_parameters())
+    elif model_type == 'vanilla_vjepa':
+        model_parameters = (
+            list(encoder.vjepa.named_parameters())
+            + list(encoder.vit_decoder.named_parameters())
+            + list(encoder.vit_decoder.vit_decoder.named_parameters())
+        )
     else:
         model_parameters = list(encoder.vit_decoder.named_parameters()) + list(encoder.downsample.named_parameters())
 
