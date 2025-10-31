@@ -43,14 +43,14 @@ class VisionTransformerDecoder(nn.Module):
         self.act = nn.ReLU()
 
         self.time_expansion = nn.Conv2d(
-            self.num_frames,
+            self.T,
             self.num_target_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )
 
-        self.expansion_norm = nn.LayerNorm(self.in_dim)
+        self.expansion_norm = nn.LayerNorm(self.dim_out)
 
         self.vit_decoder = VisionTransformer(
             img_size=(32, 32),
@@ -80,10 +80,10 @@ class VisionTransformerDecoder(nn.Module):
             nn.ReLU(),
         )
 
-        self.upscale_norm = nn.LayerNorm(self.out_dim)
+        self.upscale_norm = nn.LayerNorm(self.dim_out)
 
         self.conv_regression = nn.Conv3d(
-            in_channels=self.out_dim,
+            in_channels=self.dim_out,
             out_channels=1,
             kernel_size=3,
             stride=1,
@@ -101,14 +101,14 @@ class VisionTransformerDecoder(nn.Module):
 
     def forward(self, z):
         B = z.shape[0]
-        z = z.view(B, self.num_frames, self.num_patches, self.in_dim)
+        z = z.view(B, self.T, self.num_patches, self.dim_out)
         z = self.time_expansion(z)
         z = self.act(z)
         z = self.expansion_norm(z)
         z = z.view(
             B,
             self.num_target_channels * self.num_patches,
-            self.in_dim,
+            self.dim_out,
         )
         z = self.vit_decoder(
             z,
@@ -122,7 +122,7 @@ class VisionTransformerDecoder(nn.Module):
             self.num_target_channels,
             self.patches,
             self.patches,
-            self.in_dim,
+            self.dim_out,
         )
         z = z.permute(0, 1, 4, 2, 3)
         z = self.upscale(z)
