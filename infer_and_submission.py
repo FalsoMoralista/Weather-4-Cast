@@ -7,11 +7,18 @@ from torch import nn
 from torchvision import transforms
 from torch.nn import functional as F
 
-from src.models.vision_transformer import VisionTransformer
+from src.models.vision_transformer import VisionTransformer, vit_small
 from src.models.model_wrapper import ModelWrapper
-from src.transforms import CenterSuperResCrop
+from src.models.model_v2 import ModelWrapperV2
+from src.transforms import CenterSuperResCrop, DeterministicCrop
+
 
 from src.datasets.InferenceDatasetv2 import InferenceDatasetV2, worker_init_fn
+
+deterministic_crop = DeterministicCrop(
+    input_patch_size=32,
+    output_patch_size=32,
+)
 
 
 if not torch.cuda.is_available():
@@ -129,10 +136,65 @@ def load_dinepa(epoch):
 
 
 def load_vanilla_crps(epoch):
+    vjepa = vit_small(
+        img_size=(32, 32),
+        in_chans=11,
+        patch_size=2,
+        num_frames=4,
+        tubelet_size=1,
+        use_activation_checkpointing=False,
+    )
+    model = ModelWrapperV2(
+        vjepa=vjepa,
+        patch_size=2,
+        dim_out=384,
+        num_heads=32,
+        num_decoder_layers=8,
+        num_target_channels=16,
+        vjepa_size_in=16,
+        num_frames=4,
+        image_size=32,
+        n_bins=513,
+    )
+
+    tag = "vjepa_2"
+    r_path = "vanilla_vjepa_crps/{}-ep{}.pth.tar".format(tag, epoch)
+    print("Loading checkpoint from:", r_path)
+    checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
+    model.load_state_dict(checkpoint["model"])
+
     return model
 
 
 def load_vanilla_emd(epoch):
+    vjepa = vit_small(
+        img_size=(32, 32),
+        in_chans=11,
+        patch_size=2,
+        num_frames=4,
+        tubelet_size=1,
+        use_activation_checkpointing=False,
+    )
+    model = ModelWrapperV2(
+        vjepa=vjepa,
+        patch_size=2,
+        dim_out=384,
+        num_heads=32,
+        num_decoder_layers=8,
+        num_target_channels=16,
+        vjepa_size_in=16,
+        num_frames=4,
+        image_size=32,
+        n_bins=513,
+    )
+
+    tag = "vjepa_2"
+    r_path = "vanilla_vjepa_emd/{}-ep{}.pth.tar".format(tag, epoch)
+    print("Loading checkpoint from:", r_path)
+    checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
+
+    model.load_state_dict(checkpoint["model"])
+
     return model
 
 
