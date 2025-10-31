@@ -128,7 +128,10 @@ def load_dinepa(epoch):
     return model
 
 
-def load_vanilla(epoch):
+def load_vanilla_crps(epoch):
+    return model
+
+def load_vanilla_emd(epoch):
     return model
 
 
@@ -137,7 +140,8 @@ args = parse_args()
 
 model_map = {
     "dinepa_v2": load_dinepa,
-    "vanilla_vjepa_crps": load_vanilla,
+    "vanilla_vjepa_crps": load_vanilla_crps,
+    "vanilla_vjepa_emd": load_vanilla_emd
 }
 
 model = model_map[args.model](args.epoch).to(device)
@@ -244,7 +248,7 @@ for year in years:
                     submission_results.append(
                         [
                             case_id,
-                            bin_index * 4,
+                            bin_index * 0.25,
                             ecdf_per_timestep[bin_index].item(),
                         ]
                     )
