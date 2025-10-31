@@ -47,7 +47,7 @@ from src.losses.emd import EMDLoss
 
 
 def vjepa_train_transform(sample):
-    crop = RandomSuperResCrop(32, 32, 6)
+    crop = RandomSuperResCrop(32, 32, 6, 0.7, 0.3)
     x, _ = crop(sample)
     x = x.permute(1, 0, 2, 3)
     return (x, _)
@@ -123,7 +123,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 64  # batch_size = accum_iter * batch_size
+    accum_iter = 32  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
