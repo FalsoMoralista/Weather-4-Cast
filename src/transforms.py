@@ -381,3 +381,17 @@ class PadChannels(nn.Module):
         x_padded = torch.cat([x, padding_tensor], dim=0)
 
         return x_padded, y, metadata
+
+
+class DeterministicCrop(_BaseSuperResCrop):
+    """
+    Performs a deterministic crop for prediction based on coordinates
+    provided in the sample's metadata dictionary.
+    """
+
+    def get_crop_params(self, sample: tuple) -> tuple[int, int]:
+        metadata = sample[2]
+        coords = metadata["coords"]
+        y_hr_start = int(coords["y-top-left"])
+        x_hr_start = int(coords["x-top-left"])
+        return y_hr_start, x_hr_start
