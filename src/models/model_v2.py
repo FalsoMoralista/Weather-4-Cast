@@ -180,7 +180,7 @@ class ModelWrapperV2(nn.Module):
 
     def forward(self, x):
         B, C, T, H, W = x.shape  # (B, T=4, 11, 32, 32)
-        x = x.permute(0, 2, 1, 3, 4)  # B, C, T, H, W
+#        x = x.permute(0, 2, 1, 3, 4)  # B, C, T, H, W
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         vjepa_out = self.vjepa(
