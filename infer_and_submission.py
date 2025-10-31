@@ -327,7 +327,7 @@ for year in years:
                 case_id = row["Case-id"]
                 slot_start = row["slot-start"]
 
-                slot_result = model_prediction[i]
+                slot_result = model_prediction[slot_start // 4]
                 print("Slot result shape:", slot_result.size(), flush=True)
                 slot_result = F.softmax(slot_result, dim=-1)
                 print("Softmax applied to slot result.", flush=True)
