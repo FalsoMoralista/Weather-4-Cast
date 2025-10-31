@@ -266,31 +266,51 @@ for year in years:
             images = torch.nan_to_num(images, nan=0.0, posinf=0.0, neginf=0.0)
             images = torch.clamp_min(images, 0)
 
-            resized_images = []
-            for i, row in year_specific_df.iterrows():
-                case_id = row["Case-id"]
+            if args.model == "dinepa_v2":
+                resized_images = []
+                for i, row in year_specific_df.iterrows():
+                    case_id = row["Case-id"]
 
-                x_top_left, x_bottom_right = (
-                    row["x-top-left"] // 6,
-                    row["x-bottom-right"] // 6,
-                )
-                y_top_left, y_bottom_right = (
-                    row["y-top-left"] // 6,
-                    row["y-bottom-right"] // 6,
-                )
+                    x_top_left, x_bottom_right = (
+                        row["x-top-left"] // 6,
+                        row["x-bottom-right"] // 6,
+                    )
+                    y_top_left, y_bottom_right = (
+                        row["y-top-left"] // 6,
+                        row["y-bottom-right"] // 6,
+                    )
 
-                slot_start, slot_end = row["slot-start"], row["slot-end"]
-                placeholder = images[slot_start // 4][
-                    :, :, y_top_left:y_bottom_right, x_top_left:x_bottom_right
-                ]
+                    slot_start, slot_end = row["slot-start"], row["slot-end"]
+                    placeholder = images[slot_start // 4][
+                        :, :, y_top_left:y_bottom_right, x_top_left:x_bottom_right
+                    ]
 
-                resized_img = F.interpolate(
-                    placeholder,
-                    size=(224, 224),
-                    mode="bicubic",
-                )
-                resized_images.append(resized_img)
-            images = torch.stack(resized_images)
+                    resized_img = F.interpolate(
+                        placeholder,
+                        size=(224, 224),
+                        mode="bicubic",
+                    )
+                    resized_images.append(resized_img)
+                images = torch.stack(resized_images)
+            else:
+                processed_batch = []
+                for i, row in year_specific_df.iterrows():
+                    placeholder = images[row["slot-start"] // 4]
+
+                    processed = deterministic_crop(
+                        (
+                            placeholder,
+                            torch.tensor([]),
+                            {
+                                "coords": {
+                                    "x-top-left": row["x-top-left"],
+                                    "y-top-left": row["y-top-left"],
+                                }
+                            },
+                        )
+                    )
+                    processed_batch.append(processed[0])
+                images = torch.stack(processed_batch)
             print("Images shape after cropping and resizing", images.size())
 
             with torch.amp.autocast("cuda", dtype=torch.bfloat16, enabled=True):
@@ -309,7 +329,7 @@ for year in years:
 
                 slot_result = model_prediction[i]
                 print("Slot result shape:", slot_result.size(), flush=True)
-                slot_result = F.softmax(slot_result, dim=0)
+                slot_result = F.softmax(slot_result, dim=-1)
                 print("Softmax applied to slot result.", flush=True)
                 ecdf_per_timestep = torch.cumsum(slot_result, dim=-1)
                 print("ECDF per timestep shape:", ecdf_per_timestep.size(), flush=True)
