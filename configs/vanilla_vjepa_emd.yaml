@@ -32,7 +32,7 @@ vicreg:
 logging:
   folder: /home/lucianodourado/weather-4-cast/vanilla_vjepa_crps/
   write_tag: vjepa2
-  checkpoint_freq: 1
+  checkpoint_freq: 5
 mask:
   allow_overlap: false
   aspect_ratio:
@@ -69,6 +69,6 @@ optimization:
   warmup: 10
   weight_decay: 5.0e-2 # (default: e-2)
   label_smoothing: 0.1
-  loss_function: crps # Options: mse, l1, smooth_l1, crps
+  loss_function: emd # Options: mse, l1, smooth_l1, crps, emd
 
 # mae lr: 0.0026. 6.5e-4 (blr)
