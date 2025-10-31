@@ -8,7 +8,6 @@ def crps_discrete_from_probs(probs, y_true_mm, bins):
     bins: [K]      (valores y_k crescentes, em mm)
     """
     # CDF prevista
-    probs = probs / probs.sum(dim=-1, keepdim=True)
     F_pred = probs.cumsum(dim=-1)  # [B, K]
 
     # CDF-verdade (degrau em x): T_k = 1{ y_k >= x }
@@ -29,5 +28,5 @@ def crps_loss(y_hat: torch.Tensor, y: torch.Tensor):
     return crps_discrete_from_probs(
         probs,
         y_true_mm,
-        bins=torch.arange(0.0, 512.0 + 4, 4.0, device=y.device),
+        bins=torch.linspace(0.0, 128.0, 513, device=y.device),
     )
