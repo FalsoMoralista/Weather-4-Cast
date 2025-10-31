@@ -11,9 +11,7 @@ def crps_discrete_from_probs(probs, y_true_mm, bins):
     F_pred = probs.cumsum(dim=-1)  # [B, K]
 
     # CDF-verdade (degrau em x): T_k = 1{ y_k >= x }
-    T = (
-        y_true_mm.unsqueeze(1).ge(bins.unsqueeze(0))
-    ).float()  # (bins.unsqueeze(0) <= y_true_mm.unsqueeze(1)).float()  # [B, K]
+    T = (bins.unsqueeze(0).ge(y_true_mm.unsqueeze(1))).float()  # [B, K]
 
     # Weights Δ_k (larguras)
     delta = torch.diff(bins, prepend=bins[:1])  # useless as bins have uniform width
