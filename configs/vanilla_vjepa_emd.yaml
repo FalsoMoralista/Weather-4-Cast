@@ -30,9 +30,9 @@ vicreg:
   beta: 0.0
   gamma: 0.0
 logging:
-  folder: /home/lucianodourado/weather-4-cast/vanilla_vjepa_crps/
+  folder: /home/lucianodourado/weather-4-cast/vanilla_vjepa_emd/
   write_tag: vjepa2
-  checkpoint_freq: 5
+  checkpoint_freq: 1
 mask:
   allow_overlap: false
   aspect_ratio:

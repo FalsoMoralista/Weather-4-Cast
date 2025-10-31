@@ -32,7 +32,7 @@ vicreg:
 logging:
   folder: /home/lucianodourado/weather-4-cast/vanilla_vjepa_crps/
   write_tag: vjepa2
-  checkpoint_freq: 5
+  checkpoint_freq: 1
 mask:
   allow_overlap: false
   aspect_ratio:
