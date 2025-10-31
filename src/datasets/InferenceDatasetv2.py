@@ -54,11 +54,11 @@ class InferenceDatasetV2(Dataset):
         end_idx = start_idx + 4
 
         refl_bt = self.data["REFL-BT"][start_idx:end_idx, :, :]
-        refl_bt = tensor(refl_bt, dtype=torch.float32)
+        input = tensor(refl_bt, dtype=torch.float32)
 
         if self.input_size is not None:
             input = F.interpolate(
-                refl_bt,
+                input,
                 size=self.input_size,
                 mode="bicubic",
             )

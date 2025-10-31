@@ -34,7 +34,7 @@ def dinepa_infer_transform(sample):
 
 
 def vanilla_vjepa_transform(sample):
-    return sample.permute(0, 2, 1, 3, 4)
+    return sample.permute(1, 0, 2, 3)
 
 
 def parse_args():
@@ -161,7 +161,7 @@ def load_vanilla_crps(epoch):
         n_bins=513,
     )
 
-    tag = "vjepa_2"
+    tag = "vjepa2"
     r_path = "vanilla_vjepa_crps/{}-ep{}.pth.tar".format(tag, epoch)
     print("Loading checkpoint from:", r_path)
     checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
@@ -192,7 +192,7 @@ def load_vanilla_emd(epoch):
         n_bins=513,
     )
 
-    tag = "vjepa_2"
+    tag = "vjepa2"
     r_path = "vanilla_vjepa_emd/{}-ep{}.pth.tar".format(tag, epoch)
     print("Loading checkpoint from:", r_path)
     checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
