@@ -74,7 +74,7 @@ def make_train_transform():
 
 # --
 log_timings = True
-log_freq = 64
+log_freq = 128
 # --
 
 _GLOBAL_SEED = 0
@@ -127,7 +127,7 @@ def main(args, resume_preempt=False):
     gamma = args["vicreg"]["gamma"]
 
     # -- # Gradient accumulation
-    accum_iter = 64  # batch_size = accum_iter * batch_size
+    accum_iter = 128  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -285,13 +285,13 @@ def main(args, resume_preempt=False):
         vjepa=vjepa,
         patch_size=2,
         dim_out=384,
-        num_heads=32,
+        num_heads=16,
         num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=3201,
+        n_bins=25601,
     ).to(device)
 
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)

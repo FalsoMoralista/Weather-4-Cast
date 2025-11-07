@@ -51,17 +51,39 @@ def parse_args():
         required=True,
         help="Epoch number of the model to load.",
     )
+
+    parser.add_argument(
+        "--n_bins",
+        type=int,
+        required=True,
+        help="Number of bins.",
+    )
+
+    parser.add_argument(
+        "--max_rainfall",
+        type=int,
+        required=True,
+        help="Maximum amount of rainfall (i.e., bin length/upper limit).",
+    )
+
+    parser.add_argument(
+        "--step",
+        type=float,
+        required=True,
+        help="Bin width.",
+    )
+
     return parser.parse_args()
 
 
-def load_dinepa(epoch):
+def load_dinepa(epoch, n_bins):
     dino_path = "/home/lucianodourado/dinov3-weights/dinov3_vitl16_pretrain_sat493m-eadcf0ff.pth"
     dinov3 = torch.hub.load(
         "../dinov3", "dinov3_vitl16", source="local", weights=dino_path
     ).to(device)
     dinov3 = torch.compile(dinov3, mode="reduce-overhead")
 
-    tag = "constrained_dinepa"
+    tag = "constrained_dinepa_{}_bins".format(n_bins)
 
     vjepa = VisionTransformer(
         img_size=(224, 224),
@@ -82,6 +104,7 @@ def load_dinepa(epoch):
         backbone=dinov3,
         vjepa=vjepa,
         patch_size=16,
+        n_bins=n_bins,
         dim_out=384,
         num_heads=16,
         num_decoder_layers=6,
@@ -91,10 +114,10 @@ def load_dinepa(epoch):
         num_frames=4,
     )
 
-    r_path = "dinepa_v2/{}-ep{}.pth.tar".format(tag, epoch)
+    r_path = "/home/pedrolins/dinepa_v2/{}-ep{}.pth.tar".format(tag, epoch) # TODO verify
     print("Loading checkpoint from:", r_path)
     checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
-    print("checkpoint keys:", checkpoint["model"].keys())
+    #print("checkpoint keys:", checkpoint["model"].keys())
     for idx, key in enumerate(["downsample", "vjepa"]):
         state_dict = {
             k.replace(key + ".", ""): v
@@ -139,7 +162,7 @@ def load_dinepa(epoch):
     return model
 
 
-def load_vanilla_crps(epoch):
+def load_vanilla_crps(epoch, n_bins):
     vjepa = vit_small(
         img_size=(32, 32),
         in_chans=11,
@@ -152,13 +175,13 @@ def load_vanilla_crps(epoch):
         vjepa=vjepa,
         patch_size=2,
         dim_out=384,
-        num_heads=32,
+        num_heads=16,
         num_decoder_layers=8,
         num_target_channels=16,
         vjepa_size_in=16,
         num_frames=4,
         image_size=32,
-        n_bins=3201,
+        n_bins=n_bins,
     )
 
     tag = "vjepa2"
@@ -170,54 +193,27 @@ def load_vanilla_crps(epoch):
     return model
 
 
-def load_vanilla_emd(epoch):
-    vjepa = vit_small(
-        img_size=(32, 32),
-        in_chans=11,
-        patch_size=2,
-        num_frames=4,
-        tubelet_size=1,
-        use_activation_checkpointing=False,
-    )
-    model = ModelWrapperV2(
-        vjepa=vjepa,
-        patch_size=2,
-        dim_out=384,
-        num_heads=32,
-        num_decoder_layers=8,
-        num_target_channels=16,
-        vjepa_size_in=16,
-        num_frames=4,
-        image_size=32,
-        n_bins=3201,
-    )
-
-    tag = "vjepa2"
-    r_path = "vanilla_vjepa_emd/{}-ep{}.pth.tar".format(tag, epoch)
-    print("Loading checkpoint from:", r_path)
-    checkpoint = torch.load(r_path, map_location=torch.device("cpu"))
-
-    model.load_state_dict(checkpoint["model"])
-
-    return model
-
-
 args = parse_args()
 
 
 model_map = {
     "dinepa_v2": load_dinepa,
     "vanilla_vjepa_crps": load_vanilla_crps,
-    "vanilla_vjepa_emd": load_vanilla_emd,
 }
 
-model = model_map[args.model](args.epoch).to(device)
+model = model_map[args.model](args.epoch, args.n_bins).to(device)
 
 BASE_DIR = "/home/lucianodourado/weather-4-cast/"
 
 task = "cum1"
 years = ["19", "20"]
 filenames = ["roxi_0008", "roxi_0009", "roxi_0010"]
+
+MAX_RAINFALL =  args.max_rainfall # rainfall (mm)
+EPS = args.step
+
+print('MAX RAINFALL:', MAX_RAINFALL)
+print('step:', EPS)
 
 for year in years:
     predictions = {}
@@ -334,8 +330,7 @@ for year in years:
                 ecdf_per_timestep = torch.cumsum(slot_result, dim=-1)
                 print("ECDF per timestep shape:", ecdf_per_timestep.size(), flush=True)
 
-                eps = 5.0e-3
-                bin_index_list = bins=torch.arange(0.0, 16 + eps, eps)
+                bin_index_list = bins=torch.arange(0.0, MAX_RAINFALL + EPS, EPS)
                 for bin_index in range(ecdf_per_timestep.size(0)):
                     submission_results.append(
                         [

@@ -71,7 +71,7 @@ from src.transforms import RandomSuperResCrop, CenterSuperResCrop
 
 # --
 log_timings = True
-log_freq = 128
+log_freq = 64
 checkpoint_freq = 1
 # --
 
@@ -138,7 +138,7 @@ def main(args, resume_preempt=False):
         torch.cuda.set_device(device)
 
     # -- # Gradient accumulation
-    accum_iter = 128  # batch_size = accum_iter * batch_size
+    accum_iter = 64  # batch_size = accum_iter * batch_size
 
     # --
     batch_size = args["data"]["batch_size"]
@@ -147,6 +147,11 @@ def main(args, resume_preempt=False):
     root_path = args["data"]["root_path"]
     image_folder = args["data"]["image_folder"]
     resume_epoch = args["data"]["resume_epoch"]
+    
+    # --
+    N_BINS = args['forecast']['n_bins']
+    MAX_RAIN = args['forecast']['max_rain']
+    EPS = args['forecast']['eps']
 
     # --
 
@@ -279,7 +284,7 @@ def main(args, resume_preempt=False):
 
     # print("Dinov3 Model:", dinov3)
 
-    if not tag == 'constrained_dinepa':
+    if tag == 'decoder_only':
         model = DecoderOnlyWrapper(
             backbone=dinov3,
             patch_size=16,
@@ -293,19 +298,20 @@ def main(args, resume_preempt=False):
             num_frames=4,
         ).to(device)
 
-        
     else:
         model = ModelWrapper(
             backbone=dinov3,
             vjepa=vjepa,
             patch_size=16,
             dim_out=384,
+            embed_dim=1024,
+            n_bins=N_BINS,
             num_heads=16,
             num_decoder_layers=6,
             num_target_channels=16,
             vjepa_size_in=14,
             vjepa_size_out=18,
-            num_frames=4,
+            num_frames=1,
         ).to(device)
 
 
@@ -434,9 +440,10 @@ def main(args, resume_preempt=False):
                 probs = torch.softmax(vjepa_logits, dim=-1)
                 m = y.mean(dim=(2, 3))  # [B,16] média espacial por slot (mm/h)
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
-                eps = 5.0e-3
-
-                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, 16 + eps, eps, device=device))
+                
+                upper_bound = MAX_RAIN # in mm
+                eps = EPS
+                loss = crps_discrete_from_probs(probs, y_true_mm, bins=torch.arange(0.0, upper_bound + eps, eps, device=device))
 
                 loss_val = loss.item()
 
@@ -522,11 +529,12 @@ def main(args, resume_preempt=False):
                 m = labels.mean(dim=(2, 3))
                 y_true_mm = m.sum(dim=1) / 4.0  # [B]  acum. 4h em mm
                 
-                eps = 5.0e-3 
+                upper_bound = MAX_RAIN
+                eps = EPS
                 test_loss = crps_discrete_from_probs(
                     probs,
                     y_true_mm,
-                    bins=torch.arange(0.0, 16 + eps, eps, device=device),
+                    bins=torch.arange(0.0, upper_bound + eps, eps, device=device),
                 )
 
             total_test_loss_meter.update(test_loss)

@@ -1,5 +1,5 @@
 data:
-  batch_size: 32
+  batch_size: 64
   color_jitter_strength: 0.0
   crop_scale:
   - 0.3
@@ -30,8 +30,8 @@ vicreg:
   beta: 0.0
   gamma: 0.0  
 logging:
-  folder: /home/lucianodourado/weather-4-cast/dinepa_v2/
-  write_tag: constrained_dinepa #reduced_size_dinepa
+  folder: /home/pedrolins/dinepa_v2
+  write_tag: constrained_dinepa_25601_bins #reduced_size_dinepa
 mask:
   allow_overlap: false
   aspect_ratio:
@@ -47,6 +47,10 @@ mask:
   pred_mask_scale:
   - 0.15
   - 0.2
+forecast:
+  n_bins: 25601
+  max_rain: 128
+  eps: 5.0e-3
 meta:
   copy_data: false
   load_checkpoint: true
@@ -63,7 +67,7 @@ optimization:
   final_lr: 1.0e-05 # Default: 1e-6
   final_weight_decay: 0.5  
   ipe_scale: 1.0
-  lr: 2.0e-04 # 1e-4
+  lr: 5.0e-04 # 1e-4
   start_lr: 1.0e-05 # 
   warmup: 5
   weight_decay: 0.2 # (default: e-2)

@@ -40,8 +40,13 @@ class VisionTransformerDecoder(nn.Module):
         self.num_patches = self.H_patches * self.W_patches
 
         self.dim_out = dim_out
+        self.hidden_dim = self.dim_out // 2
 
         self.act = nn.GELU()
+
+        self.reducer = nn.Linear(in_features=self.dim_out, out_features=self.hidden_dim)
+
+        self.reducer_norm = nn.LayerNorm(self.hidden_dim)
 
         self.time_expansion = nn.Conv2d(
             self.T,
@@ -51,13 +56,13 @@ class VisionTransformerDecoder(nn.Module):
             padding=1,
         )
 
-        self.expansion_norm = nn.LayerNorm(self.dim_out)
+        self.expansion_norm = nn.LayerNorm(self.hidden_dim)
 
         self.vit_decoder = VisionTransformer(
             img_size=(32, 32),
             patch_size=self.patch_size,
             in_chans=num_target_channels,  # 16
-            embed_dim=dim_out,
+            embed_dim=self.hidden_dim,
             depth=num_layers,
             num_heads=num_heads,
             mlp_ratio=4,
@@ -81,10 +86,10 @@ class VisionTransformerDecoder(nn.Module):
             nn.GELU(),
         )
 
-        self.upscale_norm = nn.LayerNorm(self.dim_out)
+        self.upscale_norm = nn.LayerNorm(self.hidden_dim)
 
         self.conv_regression = nn.Conv3d(
-            in_channels=self.dim_out,
+            in_channels=self.hidden_dim,
             out_channels=1,
             kernel_size=3,
             stride=1,
@@ -103,13 +108,16 @@ class VisionTransformerDecoder(nn.Module):
     def forward(self, z):
         B = z.shape[0]
         z = z.view(B, self.T, self.num_patches, self.dim_out)
+        z = self.reducer(z)
+        z = self.act(z)
+        z = self.reducer_norm(z)
         z = self.time_expansion(z)
         z = self.act(z)
         z = self.expansion_norm(z)
         z = z.view(
             B,
             self.num_target_channels * self.num_patches,
-            self.dim_out,
+            self.hidden_dim,
         )
         z = self.vit_decoder(
             z,
@@ -123,7 +131,7 @@ class VisionTransformerDecoder(nn.Module):
             self.num_target_channels,
             self.H_patches,
             self.W_patches,
-            self.dim_out,
+            self.hidden_dim,
         )
         z = z.permute(0, 1, 4, 2, 3)
         z = self.upscale(z)
@@ -180,7 +188,6 @@ class ModelWrapperV2(nn.Module):
 
     def forward(self, x):
         B, C, T, H, W = x.shape  # (B, T=4, 11, 32, 32)
-#        x = x.permute(0, 2, 1, 3, 4)  # B, C, T, H, W
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         vjepa_out = self.vjepa(

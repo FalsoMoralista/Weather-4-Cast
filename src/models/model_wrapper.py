@@ -23,7 +23,7 @@ class VisionTransformerDecoder(nn.Module):
         H_patches,
         W_patches,
         vjepa_size_in,
-        n_bins=3201,
+        n_bins=321,
         layer_norm=partial(nn.LayerNorm, eps=1e-6),
         *args,
         **kwargs,
@@ -48,7 +48,7 @@ class VisionTransformerDecoder(nn.Module):
         self.act = nn.GELU() 
 
         self.time_expansion = nn.Conv2d(
-            4,
+            1,
             num_target_channels,
             kernel_size=3,
             stride=1,
@@ -131,15 +131,16 @@ class VisionTransformerDecoder(nn.Module):
         x = self.conv_bins(x).squeeze(2, 3, 4)        
         return x
 
-
 class ModelWrapper(nn.Module):
     def __init__(
         self,
         backbone,
         vjepa,
         patch_size,
+        embed_dim=1024,
         dim_out=384,
         num_heads=16,
+        n_bins=3201,
         num_decoder_layers=4,
         num_target_channels=16,
         vjepa_size_in=14,
@@ -150,20 +151,30 @@ class ModelWrapper(nn.Module):
         self.backbone = backbone
         self.backbone.eval()
         self.backbone.requires_grad_(False)
+        self.embed_dim = embed_dim
         self.vjepa = vjepa
         self.downsample = nn.Conv2d(in_channels=11, out_channels=3, kernel_size=1)
         self.patch_size = patch_size
         self.num_target_channels = num_target_channels
         self.vjepa_size_in = vjepa_size_in
         self.vjepa_size_out = vjepa_size_out
+        self.n_bins = n_bins
         self.dim_out = dim_out
         self.act = nn.GELU()
 
+        self.temporal_conv3d = nn.Conv3d(
+            in_channels=embed_dim,
+            out_channels=embed_dim,   # keep same feature dim
+            kernel_size=(4, 1, 1),  # convolve only over time
+            stride=(1, 1, 1),
+            bias=False,
+        )
 
         self.vit_decoder = VisionTransformerDecoder(
             T=num_frames,
             vjepa_size_in=vjepa_size_in,
             dim_out=self.dim_out,
+            n_bins=self.n_bins,
             num_layers=num_decoder_layers,
             num_heads=num_heads,
             H_patches=224 // patch_size,
@@ -190,15 +201,21 @@ class ModelWrapper(nn.Module):
         H_patches = H // self.patch_size
         W_patches = W // self.patch_size
         tokens = tokens.reshape(
-            B, T * tokens.size(1), tokens.size(2)
+            B, T, tokens.size(1), tokens.size(2)
         ).clone()  # Inference mode tensors requires cloning for grad mode reutilisation
+        
+        x = tokens.view(B, self.embed_dim, T, H_patches, W_patches)
+        x = self.temporal_conv3d(x).squeeze(2)
+        x = self.act(x)     
+        x = x.view(B, H_patches * W_patches, self.embed_dim)
 
         vjepa_out = self.vjepa(
-            x=tokens,
+            x=x,
             tokenize=False,
-            T=T,
+            T=1,
             H_patches=H_patches,
             W_patches=W_patches,
         )
         regressed = self.vit_decoder(vjepa_out)  # B, 16, 1, 252, 252
+
         return regressed
