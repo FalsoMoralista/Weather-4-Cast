@@ -1,5 +1,7 @@
 # Weather-4-Cast
 
+![method](visualization/DinoV3Pipeline.png)
+
 This repository holds our official submission for the Weather-4-Cast 2025 competition. Our team competed in the 'Cumulative Rainfall Downstream' task.
 
 Available at: https://weather4cast.net/neurips2025/
